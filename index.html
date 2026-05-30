@@ -1,383 +1,470 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mis Traducciones</title>
-<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Traducciones</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<div id="loadingOverlay">
-  <div class="spinner"></div>
-  <p>Cargando...</p>
-</div>
-
-<div id="setupBanner">
-  ⚠️ Supabase no configurado. Editá las variables <strong>SUPABASE_URL</strong> y <strong>SUPABASE_ANON_KEY</strong> al inicio del script.
-</div>
-
-<nav>
-  <div class="nav-brand" onclick="showPage('home')">✦ Traducciones</div>
-  <div class="nav-center">
-    <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="Buscar novela..." oninput="filterNovels(this.value)">
-    </div>
+  <div id="loadingOverlay">
+    <div class="spinner"></div>
+    <p>Cargando...</p>
   </div>
-  <div class="nav-right">
-    <button class="btn-icon" onclick="toggleDark()" title="Modo oscuro">☾</button>
-    <button class="nav-user" id="navUserBtn" onclick="toggleUserMenu()">
-      <div class="nav-avatar" id="navAvatar">?</div>
-      <span id="navUserName">Entrar</span>
-    </button>
-  </div>
-</nav>
 
-<div class="user-dropdown" id="userDropdown">
-  <div class="user-dropdown-header">
-    <div class="user-dropdown-name" id="ddName">–</div>
-    <div class="user-dropdown-role" id="ddRole">–</div>
+  <div id="setupBanner">
+    ⚠️ Supabase no configurado. Editá las variables <strong>SUPABASE_URL</strong> y <strong>SUPABASE_ANON_KEY</strong>
+    al inicio del script.
   </div>
-  <button class="dropdown-item" onclick="openUserProfile()">👤 Mi perfil</button>
-  <button class="dropdown-item admin-only" style="display:none" onclick="closeUserMenu();openAdminPrefs()">⚙ Preferencias</button>
-  <button class="dropdown-item admin-only" style="display:none" onclick="closeUserMenu();openAdminPanel()">🛠 Panel admin <span class="notif-badge" id="adminBadge"></span></button>
-  <hr class="dropdown-sep">
-  <button class="dropdown-item danger" onclick="logoutUser()">↩ Cerrar sesión</button>
-</div>
 
-<!-- HOME -->
-<div id="page-home" class="page active">
-  <div class="home-hero">
-    <h1>Mis Traducciones</h1>
-    <p>Colección personal de novelas traducidas</p>
-    <hr class="divider">
-  </div>
-  <div class="section-header">
-    <h2 id="novelCount">0 novelas</h2>
-    <button class="btn btn-primary admin-only" style="display:none" onclick="openAddNovel()">+ Agregar novela</button>
-  </div>
-  <div class="novels-grid" id="novelsGrid"></div>
-</div>
-
-<!-- NOVEL PAGE -->
-<div id="page-novel" class="page">
-  <div class="novel-page">
-    <button class="back-btn" onclick="showPage('home')">← Inicio</button>
-    <div class="novel-header">
-      <div class="novel-cover-lg" id="ndCover"></div>
-      <div class="novel-info">
-        <h1 id="ndTitle"></h1>
-        <div class="author" id="ndAuthor"></div>
-        <div class="synopsis" id="ndSynopsis"></div>
-        <div id="ndTags" style="margin-bottom:.7rem"></div>
-        <div class="novel-stats">
-          <span><b id="ndChCount">0</b> capítulos</span>
-          <span>Estado: <b id="ndStatus"></b></span>
-          <span id="ndDate" style="display:none">Agregada: <b id="ndDateVal"></b></span>
-        </div>
-        <div class="novel-actions">
-          <button class="fav-btn" id="favBtn" onclick="toggleFavorite()">♡ Favorito</button>
-          <button class="btn btn-primary admin-only" style="display:none" onclick="openAddChapter()">+ Capítulo</button>
-          <button class="btn btn-secondary admin-only" style="display:none" onclick="openEditNovel()">✏ Editar</button>
-          <button class="btn btn-danger btn-sm admin-only" style="display:none" onclick="confirmDeleteNovel()">✕ Eliminar</button>
-        </div>
+  <div id="page-landing" class="landing-page" style="display:none">
+    <div class="landing-hero">
+      <div class="landing-logo">✦</div>
+      <h1>GogoFansub</h1>
+      <p class="landing-subtitle">La Biblioteca de Gogolonia abre sus puertas</p>
+      <p class="landing-description">
+        Unite a nuestra comunidad de lectores. Registrá tu progreso de lectura, guardá tus novelas favoritas en tu
+        estantería personal y mantenete al día con los últimos capítulos de las mejores obras y Deidad Peak.
+      </p>
+      <div class="landing-info-card">
+        <p class="landing-info-text">¿Querés saber más sobre Gogo?</p>
+        <a href="https://gogosaporu.com/" target="_blank" class="btn btn-secondary btn-lg">Hacé click aquí</a>
+      </div>
+      <div class="landing-actions">
+        <button class="btn btn-primary btn-lg" onclick="openAuthFromLanding('login')">Iniciá sesión</button>
+        <button class="btn btn-secondary btn-lg" onclick="openAuthFromLanding('register')">Registrate</button>
+        <button class="btn btn-secondary btn-lg" onclick="continueAsGuest()">Continuá como invitado</button>
       </div>
     </div>
-    <div class="chapter-section" id="chapterSection">
-      <div class="chapter-section-header"><h2>Capítulos</h2></div>
-      <div id="chapterListContainer"></div>
-    </div>
   </div>
-</div>
 
-<!-- READER -->
-<div id="page-reader" class="page">
-  <div class="reader-wrap" id="readerWrap">
-    <div class="reader-toolbar">
-      <button class="back-btn" onclick="goBackToNovel()">← Novela</button>
-      <div class="reader-tools">
-        <div class="font-ctrl">
-          <button onclick="changeFontSize(-1)">A−</button>
-          <span class="font-display" id="fontSizeDisplay">18</span>
-          <button onclick="changeFontSize(1)">A+</button>
+  <div id="appContainer" style="display:none">
+    <nav>
+      <div class="nav-brand" onclick="showPage('home')">✦ Traducciones</div>
+      <div class="nav-center">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Buscar novela..." oninput="filterNovels(this.value)">
         </div>
-        <button class="reader-tool-btn" onclick="cycleFontFamily()" id="fontFamilyBtn">Crimson</button>
-        <button class="reader-tool-btn" onclick="toggleReaderSettings()" id="settingsToggleBtn">⚙ Ajustes</button>
-        <button class="reader-tool-btn" onclick="toggleFullscreen()" id="fullscreenBtn">⛶ Pantalla completa</button>
+      </div>
+      <div class="nav-right">
         <button class="btn-icon" onclick="toggleDark()" title="Modo oscuro">☾</button>
+        <button class="nav-user" id="navUserBtn" onclick="toggleUserMenu()">
+          <div class="nav-avatar" id="navAvatar">?</div>
+          <span id="navUserName">Entrar</span>
+        </button>
       </div>
+    </nav>
+
+    <div class="user-dropdown" id="userDropdown">
+      <div class="user-dropdown-header">
+        <div class="user-dropdown-name" id="ddName">–</div>
+        <div class="user-dropdown-role" id="ddRole">–</div>
+      </div>
+      <button class="dropdown-item" onclick="openUserProfile()">👤 Mi perfil</button>
+      <button class="dropdown-item admin-only" style="display:none" onclick="closeUserMenu();openAdminPrefs()">⚙
+        Preferencias</button>
+      <button class="dropdown-item admin-only" style="display:none" onclick="closeUserMenu();openAdminPanel()">🛠 Panel
+        admin <span class="notif-badge" id="adminBadge"></span></button>
+      <hr class="dropdown-sep">
+      <button class="dropdown-item danger" onclick="logoutUser()">↩ Cerrar sesión</button>
     </div>
-    <div class="reader-settings-panel" id="readerSettingsPanel" style="display:none">
-      <div class="settings-inner">
-        <div class="setting-row">
-          <label>Ancho del texto</label>
-          <input type="range" id="widthSlider" min="400" max="1000" step="20" value="680" oninput="changeReaderWidth(this.value)">
-          <span id="widthVal">680px</span>
+
+    <!-- HOME -->
+    <div id="page-home" class="page active">
+      <div class="home-hero">
+        <h1>Mis Traducciones</h1>
+        <p>Colección personal de novelas traducidas</p>
+        <hr class="divider">
+      </div>
+      <div class="section-header">
+        <h2 id="novelCount">0 novelas</h2>
+        <button class="btn btn-primary admin-only" style="display:none" onclick="openAddNovel()">+ Agregar
+          novela</button>
+      </div>
+      <div class="novels-grid" id="novelsGrid"></div>
+    </div>
+
+    <!-- NOVEL PAGE -->
+    <div id="page-novel" class="page">
+      <div class="novel-page">
+        <button class="back-btn" onclick="showPage('home')">← Inicio</button>
+        <div class="novel-header">
+          <div class="novel-cover-lg" id="ndCover"></div>
+          <div class="novel-info">
+            <h1 id="ndTitle"></h1>
+            <div class="author" id="ndAuthor"></div>
+            <div class="synopsis" id="ndSynopsis"></div>
+            <div id="ndTags" style="margin-bottom:.7rem"></div>
+            <div class="novel-stats">
+              <span><b id="ndChCount">0</b> capítulos</span>
+              <span>Estado: <b id="ndStatus"></b></span>
+              <span id="ndDate" style="display:none">Agregada: <b id="ndDateVal"></b></span>
+            </div>
+            <div class="novel-actions">
+              <button class="fav-btn" id="favBtn" onclick="toggleFavorite()">♡ Favorito</button>
+              <button class="btn btn-primary admin-only" style="display:none" onclick="openAddChapter()">+
+                Capítulo</button>
+              <button class="btn btn-secondary admin-only" style="display:none" onclick="openEditNovel()">✏
+                Editar</button>
+              <button class="btn btn-danger btn-sm admin-only" style="display:none" onclick="confirmDeleteNovel()">✕
+                Eliminar</button>
+            </div>
+          </div>
         </div>
-        <div class="setting-row">
-          <label>Interlineado</label>
-          <input type="range" id="lineSlider" min="140" max="230" step="5" value="195" oninput="changeLineHeight(this.value)">
-          <span id="lineVal">1.95</span>
+        <div class="chapter-section" id="chapterSection">
+          <div class="chapter-section-header">
+            <h2>Capítulos</h2>
+          </div>
+          <div id="chapterListContainer"></div>
         </div>
       </div>
     </div>
-    <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
-    <div class="reader-content" id="readerContent">
-      <div class="reader-novel-title" id="rNovelTitle"></div>
-      <h1 class="reader-ch-title" id="rChTitle"></h1>
-      <div class="reader-body font-serif" id="readerBody"></div>
-    </div>
-    <div class="reader-nav" id="readerNav">
-      <button class="reader-nav-btn" id="prevBtn" onclick="navigateChapter(-1)">← Anterior</button>
-      <button class="reader-nav-btn center" id="chPickerBtn" onclick="openChPicker()">Cap. <span id="rChNum"></span></button>
-      <button class="reader-nav-btn" id="nextBtn" onclick="navigateChapter(1)">Siguiente →</button>
-    </div>
-  </div>
-</div>
 
-<!-- CONTEXT MENU -->
-<div class="custom-ctx-menu" id="ctxMenu">
-  <button class="ctx-item danger" onclick="openReportModal()">⚠ Indicar error en este texto</button>
-</div>
-
-<!-- MODAL: Novela -->
-<div class="modal-overlay" id="modalNovel">
-  <div class="modal">
-    <h2 id="novelModalH">Nueva Novela</h2>
-    <div class="field">
-      <label>Portada</label>
-      <input type="file" id="novelCoverInput" accept="image/*" onchange="previewCover(this)">
-      <div class="cover-preview" id="coverPreview" style="display:none"><img id="coverPreviewImg" src=""></div>
-    </div>
-    <div class="field"><label>Título *</label><input type="text" id="nTitle" placeholder="Título de la novela"></div>
-    <div class="field-row">
-      <div class="field"><label>Autor original</label><input type="text" id="nAuthor" placeholder="Autor"></div>
-      <div class="field"><label>Estado</label>
-        <select id="nStatus">
-          <option value="En traducción">En traducción</option>
-          <option value="Completada">Completada</option>
-          <option value="Pausada">Pausada</option>
-          <option value="Abandonada">Abandonada</option>
-        </select>
+    <!-- READER -->
+    <div id="page-reader" class="page">
+      <div class="reader-wrap" id="readerWrap">
+        <div class="reader-toolbar">
+          <button class="back-btn" onclick="goBackToNovel()">← Novela</button>
+          <div class="reader-tools">
+            <div class="font-ctrl">
+              <button onclick="changeFontSize(-1)">A−</button>
+              <span class="font-display" id="fontSizeDisplay">18</span>
+              <button onclick="changeFontSize(1)">A+</button>
+            </div>
+            <button class="reader-tool-btn" onclick="cycleFontFamily()" id="fontFamilyBtn">Crimson</button>
+            <button class="reader-tool-btn" onclick="toggleReaderSettings()" id="settingsToggleBtn">⚙ Ajustes</button>
+            <button class="reader-tool-btn" onclick="toggleFullscreen()" id="fullscreenBtn">⛶ Pantalla completa</button>
+            <button class="btn-icon" onclick="toggleDark()" title="Modo oscuro">☾</button>
+          </div>
+        </div>
+        <div class="reader-settings-panel" id="readerSettingsPanel" style="display:none">
+          <div class="settings-inner">
+            <div class="setting-row">
+              <label>Ancho del texto</label>
+              <input type="range" id="widthSlider" min="400" max="1000" step="20" value="680"
+                oninput="changeReaderWidth(this.value)">
+              <span id="widthVal">680px</span>
+            </div>
+            <div class="setting-row">
+              <label>Interlineado</label>
+              <input type="range" id="lineSlider" min="140" max="230" step="5" value="195"
+                oninput="changeLineHeight(this.value)">
+              <span id="lineVal">1.95</span>
+            </div>
+          </div>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="progressBar" style="width:0%"></div>
+        </div>
+        <div class="reader-content" id="readerContent">
+          <div class="reader-novel-title" id="rNovelTitle"></div>
+          <h1 class="reader-ch-title" id="rChTitle"></h1>
+          <div class="reader-body font-serif" id="readerBody"></div>
+        </div>
+        <div class="reader-nav" id="readerNav">
+          <button class="reader-nav-btn" id="prevBtn" onclick="navigateChapter(-1)">← Anterior</button>
+          <button class="reader-nav-btn center" id="chPickerBtn" onclick="openChPicker()">Cap. <span
+              id="rChNum"></span></button>
+          <button class="reader-nav-btn" id="nextBtn" onclick="navigateChapter(1)">Siguiente →</button>
+        </div>
       </div>
     </div>
-    <div class="field"><label>Géneros / Tags (separados por coma)</label><input type="text" id="nTags" placeholder="Fantasía, Romance, Isekai"></div>
-    <div class="field"><label>Sinopsis *</label><textarea id="nSynopsis" placeholder="Sinopsis de la novela..."></textarea></div>
-    <div class="field"><label>Notas del traductor</label><textarea id="nNotes" placeholder="Comentarios, créditos..." style="min-height:65px"></textarea></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modalNovel')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveNovel()">Guardar</button>
-    </div>
-  </div>
-</div>
+  </div> <!-- /#appContainer -->
 
-<!-- MODAL: Capítulo -->
-<div class="modal-overlay" id="modalChapter">
-  <div class="modal modal-lg">
-    <h2 id="chModalH">Nuevo Capítulo</h2>
-    <div class="field-row">
-      <div class="field" style="max-width:110px"><label>Número *</label><input type="number" id="cNum" min="0" placeholder="1"></div>
-      <div class="field"><label>Título</label><input type="text" id="cTitle" placeholder="El comienzo"></div>
-    </div>
-    <div class="field">
-      <label>Texto *</label>
-      <div class="text-toolbar">
-        <button onclick="ins('**','**')"><b>N</b></button>
-        <button onclick="ins('_','_')"><i>K</i></button>
-        <button onclick="insBreak()">¶</button>
-        <button onclick="insImgTag()">🖼 [img:N]</button>
+  <!-- CONTEXT MENU -->
+  <div class="custom-ctx-menu" id="ctxMenu">
+    <button class="ctx-item danger" onclick="openReportModal()">⚠ Indicar error en este texto</button>
+  </div>
+
+  <!-- MODAL: Novela -->
+  <div class="modal-overlay" id="modalNovel">
+    <div class="modal">
+      <h2 id="novelModalH">Nueva Novela</h2>
+      <div class="field">
+        <label>Portada</label>
+        <input type="file" id="novelCoverInput" accept="image/*" onchange="previewCover(this)">
+        <div class="cover-preview" id="coverPreview" style="display:none"><img id="coverPreviewImg" src=""></div>
       </div>
-      <textarea id="chapterTextArea" placeholder="Pega o escribe el texto aquí.&#10;&#10;Separa párrafos con una línea en blanco.&#10;**negrita**  _cursiva_  [img:1] para imagen"></textarea>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:1rem;">
-      <button class="btn btn-secondary btn-sm" onclick="togglePreview()">👁 Vista previa</button>
-    </div>
-    <div id="previewSection" style="display:none;margin-bottom:1rem;">
-      <div class="field"><label>Vista previa</label><div class="preview-box" id="previewBox"></div></div>
-    </div>
-    <div class="field">
-      <label>Imágenes del capítulo</label>
-      <div class="img-upload-area" onclick="document.getElementById('chImgInput').click()">
-        Clic para agregar imágenes · se referencian con [img:1], [img:2]…
+      <div class="field"><label>Título *</label><input type="text" id="nTitle" placeholder="Título de la novela"></div>
+      <div class="field-row">
+        <div class="field"><label>Autor original</label><input type="text" id="nAuthor" placeholder="Autor"></div>
+        <div class="field"><label>Estado</label>
+          <select id="nStatus">
+            <option value="En traducción">En traducción</option>
+            <option value="Completada">Completada</option>
+            <option value="Pausada">Pausada</option>
+            <option value="Abandonada">Abandonada</option>
+          </select>
+        </div>
       </div>
-      <input type="file" id="chImgInput" accept="image/*" multiple style="display:none" onchange="loadChImages(this)">
-      <div class="img-thumbs" id="imgThumbs"></div>
-    </div>
-    <div class="field"><label>Nota del traductor</label><textarea id="cNotes" style="min-height:60px" placeholder="Nota al pie (opcional)"></textarea></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modalChapter')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveChapter()">Guardar capítulo</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: Selector capítulo -->
-<div class="modal-overlay" id="modalChPicker">
-  <div class="modal" style="max-width:380px">
-    <h2>Ir a capítulo</h2>
-    <ul class="ch-selector-list" id="chSelectorList"></ul>
-    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modalChPicker')">Cerrar</button></div>
-  </div>
-</div>
-
-<!-- MODAL: Reportar error -->
-<div class="modal-overlay" id="modalReport">
-  <div class="modal" style="max-width:420px">
-    <h2>⚠ Indicar error</h2>
-    <p style="font-size:.84rem;color:var(--text3);margin-bottom:1rem;line-height:1.6">Marcaste el siguiente texto:</p>
-    <div class="report-selected-text" id="reportSelectedText"></div>
-    <div class="field">
-      <label>Comentario (opcional)</label>
-      <textarea id="reportComment" style="min-height:70px" placeholder="Ej: Esta palabra debería ser... / Falta un espacio... / Error de traducción..."></textarea>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modalReport')">Cancelar</button>
-      <button class="btn btn-primary" onclick="submitReport()">Enviar reporte</button>
+      <div class="field" style="flex-direction:row;align-items:center;gap:8px;margin-bottom:1rem">
+        <input type="checkbox" id="nPremium" style="width:auto;margin:0">
+        <label for="nPremium" style="margin:0;cursor:pointer;font-weight:500">Premium</label>
+      </div>
+      <div class="field"><label>Géneros / Tags (separados por coma)</label><input type="text" id="nTags"
+          placeholder="Fantasía, Romance, Isekai"></div>
+      <div class="field"><label>Sinopsis *</label><textarea id="nSynopsis"
+          placeholder="Sinopsis de la novela..."></textarea></div>
+      <div class="field"><label>Notas del traductor</label><textarea id="nNotes" placeholder="Comentarios, créditos..."
+          style="min-height:65px"></textarea></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalNovel')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveNovel()">Guardar</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- AUTH GATE -->
-<div class="auth-gate" id="authGate">
-  <div class="auth-box">
-    <h3>✦ Traducciones</h3>
-    <p id="authSubtitle">Accedé a tu cuenta</p>
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="tabLoginBtn" onclick="switchAuthTab('login')">Iniciar sesión</button>
-      <button class="auth-tab" id="tabRegisterBtn" onclick="switchAuthTab('register')">Registrarse</button>
-    </div>
-
-    <!-- LOGIN -->
-    <div id="loginForm">
-      <div class="field"><label>Usuario</label><input type="text" id="loginUser" placeholder="Tu nombre de usuario" autocomplete="username"></div>
-      <div class="field"><label>Contraseña</label><input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <div class="auth-error" id="loginError"></div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem" onclick="doLogin()">Entrar</button>
-      <hr class="auth-divider">
-      <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center" onclick="continueAsGuest()">Continuar como invitado</button>
-    </div>
-
-    <!-- REGISTER -->
-    <div id="registerForm" style="display:none">
-      <div class="field"><label>Nombre de usuario</label><input type="text" id="regUser" placeholder="Elegí un nombre de usuario" autocomplete="username"></div>
-      <div class="field"><label>Nombre visible (opcional)</label><input type="text" id="regDisplayName" placeholder="Cómo querés que te vean"></div>
-      <div class="field"><label>Contraseña</label><input type="password" id="regPass" placeholder="Contraseña" autocomplete="new-password"></div>
-      <div class="field"><label>Confirmar contraseña</label><input type="password" id="regPass2" placeholder="Repetí la contraseña" onkeydown="if(event.key==='Enter')doRegister()"></div>
-      <div class="auth-error" id="registerError"></div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem" onclick="doRegister()">Crear cuenta</button>
-      <hr class="auth-divider">
-      <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center" onclick="continueAsGuest()">Continuar como invitado</button>
+  <!-- MODAL: Capítulo -->
+  <div class="modal-overlay" id="modalChapter">
+    <div class="modal modal-lg">
+      <h2 id="chModalH">Nuevo Capítulo</h2>
+      <div class="field-row">
+        <div class="field" style="max-width:110px"><label>Número *</label><input type="number" id="cNum" min="0"
+            placeholder="1"></div>
+        <div class="field"><label>Título</label><input type="text" id="cTitle" placeholder="El comienzo"></div>
+      </div>
+      <div class="field">
+        <label>Texto *</label>
+        <div class="text-toolbar">
+          <button onclick="ins('**','**')"><b>N</b></button>
+          <button onclick="ins('_','_')"><i>K</i></button>
+          <button onclick="insBreak()">¶</button>
+          <button onclick="insImgTag()">🖼 [img:N]</button>
+        </div>
+        <textarea id="chapterTextArea"
+          placeholder="Pega o escribe el texto aquí.&#10;&#10;Separa párrafos con una línea en blanco.&#10;**negrita**  _cursiva_  [img:1] para imagen"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:1rem;">
+        <button class="btn btn-secondary btn-sm" onclick="togglePreview()">👁 Vista previa</button>
+      </div>
+      <div id="previewSection" style="display:none;margin-bottom:1rem;">
+        <div class="field"><label>Vista previa</label>
+          <div class="preview-box" id="previewBox"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Imágenes del capítulo</label>
+        <div class="img-upload-area" onclick="document.getElementById('chImgInput').click()">
+          Clic para agregar imágenes · se referencian con [img:1], [img:2]…
+        </div>
+        <input type="file" id="chImgInput" accept="image/*" multiple style="display:none" onchange="loadChImages(this)">
+        <div class="img-thumbs" id="imgThumbs"></div>
+      </div>
+      <div class="field"><label>Nota del traductor</label><textarea id="cNotes" style="min-height:60px"
+          placeholder="Nota al pie (opcional)"></textarea></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalChapter')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveChapter()">Guardar capítulo</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- MODAL: Perfil de usuario -->
-<div class="modal-overlay" id="modalProfile">
-  <div class="modal" style="max-width:560px">
-    <h2 id="profileTitle">👤 Mi perfil</h2>
-    <div class="modal-tabs">
-      <button class="modal-tab active" onclick="switchProfileTab('stats')">Estadísticas</button>
-      <button class="modal-tab" onclick="switchProfileTab('favorites')">Favoritos</button>
-      <button class="modal-tab" onclick="switchProfileTab('history')">Historial</button>
-      <button class="modal-tab" onclick="switchProfileTab('settings')">Configuración</button>
+  <!-- MODAL: Selector capítulo -->
+  <div class="modal-overlay" id="modalChPicker">
+    <div class="modal" style="max-width:380px">
+      <h2>Ir a capítulo</h2>
+      <ul class="ch-selector-list" id="chSelectorList"></ul>
+      <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modalChPicker')">Cerrar</button>
+      </div>
     </div>
-    <div class="modal-tab-panel active" id="profileTabStats">
-      <div id="profileStats"></div>
+  </div>
+
+  <!-- MODAL: Reportar error -->
+  <div class="modal-overlay" id="modalReport">
+    <div class="modal" style="max-width:420px">
+      <h2>⚠ Indicar error</h2>
+      <p style="font-size:.84rem;color:var(--text3);margin-bottom:1rem;line-height:1.6">Marcaste el siguiente texto:</p>
+      <div class="report-selected-text" id="reportSelectedText"></div>
+      <div class="field">
+        <label>Comentario (opcional)</label>
+        <textarea id="reportComment" style="min-height:70px"
+          placeholder="Ej: Esta palabra debería ser... / Falta un espacio... / Error de traducción..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalReport')">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitReport()">Enviar reporte</button>
+      </div>
     </div>
-    <div class="modal-tab-panel" id="profileTabFavorites">
-      <div class="profile-novels-grid" id="profileFavorites"></div>
+  </div>
+
+  <!-- AUTH GATE -->
+  <div class="auth-gate" id="authGate">
+    <div class="auth-box">
+      <h3>✦ Traducciones</h3>
+      <p id="authSubtitle">Accedé a tu cuenta</p>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLoginBtn" onclick="switchAuthTab('login')">Iniciar sesión</button>
+        <button class="auth-tab" id="tabRegisterBtn" onclick="switchAuthTab('register')">Registrarse</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="loginForm">
+        <div class="field"><label>Usuario</label><input type="text" id="loginUser" placeholder="Tu nombre de usuario"
+            autocomplete="username"></div>
+        <div class="field"><label>Contraseña</label><input type="password" id="loginPass" placeholder="Contraseña"
+            autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+        <div class="auth-error" id="loginError"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem"
+          onclick="doLogin()">Entrar</button>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="registerForm" style="display:none">
+        <div class="field"><label>Nombre de usuario</label><input type="text" id="regUser"
+            placeholder="Elegí un nombre de usuario" autocomplete="username"></div>
+        <div class="field"><label>Nombre visible (opcional)</label><input type="text" id="regDisplayName"
+            placeholder="Cómo querés que te vean"></div>
+        <div class="field"><label>Contraseña</label><input type="password" id="regPass" placeholder="Contraseña"
+            autocomplete="new-password"></div>
+        <div class="field"><label>Confirmar contraseña</label><input type="password" id="regPass2"
+            placeholder="Repetí la contraseña" onkeydown="if(event.key==='Enter')doRegister()"></div>
+        <div class="auth-error" id="registerError"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem"
+          onclick="doRegister()">Crear cuenta</button>
+      </div>
     </div>
-    <div class="modal-tab-panel" id="profileTabHistory">
-      <div class="profile-novels-grid" id="profileHistory"></div>
-    </div>
-    <div class="modal-tab-panel" id="profileTabSettings">
-      <!-- Avatar -->
-      <div class="settings-section">
-        <h4>Foto de perfil</h4>
-        <div class="avatar-selector">
-          <div class="avatar-preview" id="profileAvatarPreview"></div>
-          <div>
-            <input type="file" id="profileAvatarInput" accept="image/*" style="display:none" onchange="loadProfileAvatar(this)">
-            <button class="avatar-upload-btn" onclick="document.getElementById('profileAvatarInput').click()">📷 Cambiar foto</button>
-            <button class="avatar-upload-btn danger-btn" style="margin-left:6px" onclick="removeProfileAvatar()">✕ Quitar</button>
+  </div>
+
+  <!-- MODAL: Perfil de usuario -->
+  <div class="modal-overlay" id="modalProfile">
+    <div class="modal" style="max-width:560px">
+      <h2 id="profileTitle">👤 Mi perfil</h2>
+      <div class="modal-tabs">
+        <button class="modal-tab active" onclick="switchProfileTab('stats')">Estadísticas</button>
+        <button class="modal-tab" onclick="switchProfileTab('favorites')">Favoritos</button>
+        <button class="modal-tab" onclick="switchProfileTab('history')">Historial</button>
+        <button class="modal-tab" onclick="switchProfileTab('settings')">Configuración</button>
+      </div>
+      <div class="modal-tab-panel active" id="profileTabStats">
+        <div id="profileStats"></div>
+      </div>
+      <div class="modal-tab-panel" id="profileTabFavorites">
+        <div class="profile-novels-grid" id="profileFavorites"></div>
+      </div>
+      <div class="modal-tab-panel" id="profileTabHistory">
+        <div class="profile-novels-grid" id="profileHistory"></div>
+      </div>
+      <div class="modal-tab-panel" id="profileTabSettings">
+        <!-- Avatar -->
+        <div class="settings-section">
+          <h4>Foto de perfil</h4>
+          <div class="avatar-selector">
+            <div class="avatar-preview" id="profileAvatarPreview"></div>
+            <div>
+              <input type="file" id="profileAvatarInput" accept="image/*" style="display:none"
+                onchange="loadProfileAvatar(this)">
+              <button class="avatar-upload-btn" onclick="document.getElementById('profileAvatarInput').click()">📷
+                Cambiar foto</button>
+              <button class="avatar-upload-btn danger-btn" style="margin-left:6px" onclick="removeProfileAvatar()">✕
+                Quitar</button>
+            </div>
+          </div>
+        </div>
+        <!-- Nombre visible -->
+        <div class="settings-section">
+          <h4>Nombre visible</h4>
+          <div class="field" style="margin-bottom:.5rem"><label>Nombre que verán los demás</label><input type="text"
+              id="profileDisplayName" placeholder="Tu nombre visible"></div>
+          <p style="font-size:.76rem;color:var(--text3)">Tu usuario de login no cambia, solo el nombre que se muestra.
+          </p>
+        </div>
+        <!-- Cambiar contraseña -->
+        <div class="settings-section">
+          <h4>Cambiar contraseña</h4>
+          <div class="field"><label>Contraseña actual</label><input type="password" id="profileOldPwd"
+              placeholder="Contraseña actual"></div>
+          <div class="field"><label>Nueva contraseña</label><input type="password" id="profileNewPwd"
+              placeholder="Nueva contraseña (mín. 4 caracteres)"></div>
+          <div class="field"><label>Confirmar nueva contraseña</label><input type="password" id="profileNewPwd2"
+              placeholder="Repetí la nueva contraseña"></div>
+          <button class="btn btn-secondary btn-sm" onclick="changeUserPassword()">🔒 Cambiar contraseña</button>
+        </div>
+        <!-- Confirmar con contraseña para guardar cambios de perfil -->
+        <div class="settings-section">
+          <h4>Confirmar cambios de perfil</h4>
+          <div class="field"><label>Contraseña actual (requerida para guardar)</label><input type="password"
+              id="profileConfirmPwd" placeholder="Tu contraseña actual"></div>
+          <div class="modal-footer" style="padding-top:0;border-top:none;margin-top:.5rem">
+            <button class="btn btn-secondary" onclick="closeModal('modalProfile')">Cancelar</button>
+            <button class="btn btn-primary" onclick="saveUserProfile()">💾 Guardar perfil</button>
           </div>
         </div>
       </div>
-      <!-- Nombre visible -->
-      <div class="settings-section">
-        <h4>Nombre visible</h4>
-        <div class="field" style="margin-bottom:.5rem"><label>Nombre que verán los demás</label><input type="text" id="profileDisplayName" placeholder="Tu nombre visible"></div>
-        <p style="font-size:.76rem;color:var(--text3)">Tu usuario de login no cambia, solo el nombre que se muestra.</p>
+      <div class="modal-footer" id="profileDefaultFooter">
+        <button class="btn btn-secondary" onclick="closeModal('modalProfile')">Cerrar</button>
       </div>
-      <!-- Cambiar contraseña -->
-      <div class="settings-section">
-        <h4>Cambiar contraseña</h4>
-        <div class="field"><label>Contraseña actual</label><input type="password" id="profileOldPwd" placeholder="Contraseña actual"></div>
-        <div class="field"><label>Nueva contraseña</label><input type="password" id="profileNewPwd" placeholder="Nueva contraseña (mín. 4 caracteres)"></div>
-        <div class="field"><label>Confirmar nueva contraseña</label><input type="password" id="profileNewPwd2" placeholder="Repetí la nueva contraseña"></div>
-        <button class="btn btn-secondary btn-sm" onclick="changeUserPassword()">🔒 Cambiar contraseña</button>
-      </div>
-      <!-- Confirmar con contraseña para guardar cambios de perfil -->
-      <div class="settings-section">
-        <h4>Confirmar cambios de perfil</h4>
-        <div class="field"><label>Contraseña actual (requerida para guardar)</label><input type="password" id="profileConfirmPwd" placeholder="Tu contraseña actual"></div>
-        <div class="modal-footer" style="padding-top:0;border-top:none;margin-top:.5rem">
-          <button class="btn btn-secondary" onclick="closeModal('modalProfile')">Cancelar</button>
-          <button class="btn btn-primary" onclick="saveUserProfile()">💾 Guardar perfil</button>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer" id="profileDefaultFooter">
-      <button class="btn btn-secondary" onclick="closeModal('modalProfile')">Cerrar</button>
     </div>
   </div>
-</div>
 
-<!-- MODAL: Admin Panel -->
-<div class="modal-overlay" id="modalAdmin">
-  <div class="modal" style="max-width:620px">
-    <h2>🛠 Panel Admin</h2>
-    <div class="modal-tabs">
-      <button class="modal-tab active" onclick="switchAdminTab('backup')">Backup</button>
-      <button class="modal-tab" onclick="switchAdminTab('reports')">Reportes <span class="notif-badge" id="adminBadgeModal"></span></button>
-      <button class="modal-tab" onclick="switchAdminTab('admins')">Admins</button>
-    </div>
+  <!-- MODAL: Admin Panel -->
+  <div class="modal-overlay" id="modalAdmin">
+    <div class="modal" style="max-width:620px">
+      <h2>🛠 Panel Admin</h2>
+      <div class="modal-tabs">
+        <button class="modal-tab active" onclick="switchAdminTab('backup')">Backup</button>
+        <button class="modal-tab" onclick="switchAdminTab('reports')">Reportes <span class="notif-badge"
+            id="adminBadgeModal"></span></button>
+        <button class="modal-tab" onclick="switchAdminTab('admins')">Admins</button>
+      </div>
 
-    <div class="modal-tab-panel active" id="adminTabBackup">
-      <div class="import-export-box">
-        <h4>📦 Backup / Importar datos</h4>
-        <p style="font-size:.82rem;color:var(--text3);margin-bottom:.9rem;line-height:1.6">
-          Exportá todos los datos a un archivo JSON para hacer backup.
-        </p>
-        <div class="import-export-btns">
-          <button class="btn btn-secondary btn-sm" onclick="exportData()">⬇ Exportar JSON</button>
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFileInput').click()">⬆ Importar JSON</button>
-          <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(this)">
+      <div class="modal-tab-panel active" id="adminTabBackup">
+        <div class="import-export-box">
+          <h4>📦 Backup / Importar datos</h4>
+          <p style="font-size:.82rem;color:var(--text3);margin-bottom:.9rem;line-height:1.6">
+            Exportá todos los datos a un archivo JSON para hacer backup.
+          </p>
+          <div class="import-export-btns">
+            <button class="btn btn-secondary btn-sm" onclick="exportData()">⬇ Exportar JSON</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFileInput').click()">⬆
+              Importar JSON</button>
+            <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(this)">
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="modal-tab-panel" id="adminTabReports">
-      <div id="reportsContainer">
-        <p style="color:var(--text3);font-size:.85rem;font-style:italic">Cargando reportes...</p>
-      </div>
-    </div>
-
-    <div class="modal-tab-panel" id="adminTabAdmins">
-      <!-- Registrar nuevo admin -->
-      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem;margin-bottom:1rem;">
-        <div style="font-size:.78rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.8rem">➕ Registrar nuevo admin</div>
-        <div class="field-row" style="margin-bottom:.6rem">
-          <div class="field"><label>Usuario nuevo</label><input type="text" id="newAdminUser" placeholder="Nombre de usuario"></div>
-          <div class="field"><label>Contraseña</label><input type="password" id="newAdminPass" placeholder="Contraseña"></div>
+      <div class="modal-tab-panel" id="adminTabReports">
+        <div id="reportsContainer">
+          <p style="color:var(--text3);font-size:.85rem;font-style:italic">Cargando reportes...</p>
         </div>
-        <div class="field" style="margin-bottom:.6rem"><label>Tu contraseña (para confirmar)</label><input type="password" id="newAdminConfirmPwd" placeholder="Tu contraseña actual"></div>
-        <button class="btn btn-primary btn-sm" onclick="registerNewAdmin()">Registrar admin</button>
+      </div>
+
+      <div class="modal-tab-panel" id="adminTabAdmins">
+        <!-- Registrar nuevo admin -->
+        <div
+          style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+          <div
+            style="font-size:.78rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.8rem">
+            ➕ Registrar nuevo admin</div>
+          <div class="field-row" style="margin-bottom:.6rem">
+            <div class="field"><label>Usuario nuevo</label><input type="text" id="newAdminUser"
+                placeholder="Nombre de usuario"></div>
+            <div class="field"><label>Contraseña</label><input type="password" id="newAdminPass"
+                placeholder="Contraseña"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="registerNewAdmin()">Registrar admin</button>
+        </div>
+        <!-- Promover lector a admin -->
+        <div
+          style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+          <div
+            style="font-size:.78rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.8rem">
+            ⚡ Promover lector a admin</div>
+          <div class="field" style="flex:1"><label>Usuario lector existente</label><input type="text"
+              id="promoteUserTarget" placeholder="Nombre de usuario del lector"></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="promoteLectorToAdmin()">Promover a admin</button>
       </div>
       <!-- Lista de admins -->
-      <div style="font-size:.82rem;color:var(--text3);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.05em;font-weight:500">Admins del sistema</div>
+      <div
+        style="font-size:.82rem;color:var(--text3);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.05em;font-weight:500">
+        Admins del sistema</div>
       <ul class="user-list" id="adminsList">
         <li style="color:var(--text3);font-size:.85rem;font-style:italic">Cargando...</li>
       </ul>
@@ -385,57 +472,64 @@
 
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modalAdmin')">Cerrar</button></div>
   </div>
-</div>
+  </div>
 
-<!-- MODAL: Preferencias de Admin -->
-<div class="modal-overlay admin-prefs-modal" id="modalAdminPrefs">
-  <div class="modal" style="max-width:440px">
-    <h2>⚙ Preferencias</h2>
-    <!-- Avatar -->
-    <div class="settings-section">
-      <h4>Foto de perfil</h4>
-      <div class="avatar-selector">
-        <div class="avatar-preview" id="adminAvatarPreview"></div>
-        <div>
-          <input type="file" id="adminAvatarInput" accept="image/*" style="display:none" onchange="loadAdminAvatar(this)">
-          <button class="avatar-upload-btn" onclick="document.getElementById('adminAvatarInput').click()">📷 Cambiar foto</button>
-          <button class="avatar-upload-btn danger-btn" style="margin-left:6px" onclick="removeAdminAvatar()">✕ Quitar</button>
+  <!-- MODAL: Preferencias de Admin -->
+  <div class="modal-overlay admin-prefs-modal" id="modalAdminPrefs">
+    <div class="modal" style="max-width:440px">
+      <h2>⚙ Preferencias</h2>
+      <!-- Avatar -->
+      <div class="settings-section">
+        <h4>Foto de perfil</h4>
+        <div class="avatar-selector">
+          <div class="avatar-preview" id="adminAvatarPreview"></div>
+          <div>
+            <input type="file" id="adminAvatarInput" accept="image/*" style="display:none"
+              onchange="loadAdminAvatar(this)">
+            <button class="avatar-upload-btn" onclick="document.getElementById('adminAvatarInput').click()">📷 Cambiar
+              foto</button>
+            <button class="avatar-upload-btn danger-btn" style="margin-left:6px" onclick="removeAdminAvatar()">✕
+              Quitar</button>
+          </div>
         </div>
+        <div class="field"><label>Nombre visible</label><input type="text" id="adminDisplayName"
+            placeholder="Tu nombre visible"></div>
       </div>
-      <div class="field"><label>Nombre visible</label><input type="text" id="adminDisplayName" placeholder="Tu nombre visible"></div>
-    </div>
-    <!-- Cambiar contraseña -->
-    <div class="settings-section">
-      <h4>Cambiar contraseña</h4>
-      <div class="field"><label>Contraseña actual</label><input type="password" id="adminOldPwd" placeholder="Contraseña actual"></div>
-      <div class="field"><label>Nueva contraseña</label><input type="password" id="adminNewPwd" placeholder="Nueva contraseña"></div>
-      <div class="field"><label>Confirmar nueva contraseña</label><input type="password" id="adminNewPwd2" placeholder="Repetí la nueva contraseña"></div>
-      <button class="btn btn-secondary btn-sm" onclick="changeAdminPassword()">🔒 Cambiar contraseña</button>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modalAdminPrefs')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveAdminProfile()">💾 Guardar cambios</button>
-    </div>
-  </div>
-</div>
-
-<!-- CONFIRM -->
-<div class="modal-overlay" id="modalConfirm">
-  <div class="confirm-box">
-    <p id="confirmMsg">¿Estás seguro?</p>
-    <div class="btns">
-      <button class="btn btn-secondary" onclick="closeModal('modalConfirm')">Cancelar</button>
-      <button class="btn btn-danger" id="confirmOkBtn">Eliminar</button>
+      <!-- Cambiar contraseña -->
+      <div class="settings-section">
+        <h4>Cambiar contraseña</h4>
+        <div class="field"><label>Contraseña actual</label><input type="password" id="adminOldPwd"
+            placeholder="Contraseña actual"></div>
+        <div class="field"><label>Nueva contraseña</label><input type="password" id="adminNewPwd"
+            placeholder="Nueva contraseña"></div>
+        <div class="field"><label>Confirmar nueva contraseña</label><input type="password" id="adminNewPwd2"
+            placeholder="Repetí la nueva contraseña"></div>
+        <button class="btn btn-secondary btn-sm" onclick="changeAdminPassword()">🔒 Cambiar contraseña</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalAdminPrefs')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveAdminProfile()">💾 Guardar cambios</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- BOTÓN FLOTANTE PARA REPORTAR TEXTO SELECCIONADO -->
-<button id="reportFloatBtn" onclick="openReportModal()">⚑ Reportar error</button>
+  <!-- CONFIRM -->
+  <div class="modal-overlay" id="modalConfirm">
+    <div class="confirm-box">
+      <p id="confirmMsg">¿Estás seguro?</p>
+      <div class="btns">
+        <button class="btn btn-secondary" onclick="closeModal('modalConfirm')">Cancelar</button>
+        <button class="btn btn-danger" id="confirmOkBtn">Eliminar</button>
+      </div>
+    </div>
+  </div>
 
-<div id="toast"></div>
+  <!-- BOTÓN FLOTANTE PARA REPORTAR TEXTO SELECCIONADO -->
+  <button id="reportFloatBtn" onclick="openReportModal()">⚑ Reportar error</button>
 
-<script src="script.js"></script>
+  <div id="toast"></div>
+
+  <script src="script.js"></script>
 </body>
-</html>
 
+</html>

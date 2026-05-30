@@ -22,8 +22,8 @@ let S = {
   fontFamily: 'serif',
   readerWidth: 680,
   lineHeight: 1.95,
-  fontNames: ['serif','source','sans'],
-  fontLabels: ['Crimson','Serif 4','Sans'],
+  fontNames: ['serif', 'source', 'sans'],
+  fontLabels: ['Crimson', 'Serif 4', 'Sans'],
   admin: false,
   editingNovelId: null,
   editingChapterId: null,
@@ -52,7 +52,7 @@ const sb = {
       // Pasar headers extra como Prefer al proxy
       Object.assign(headers, opts.headers);
     }
-    
+
     let res;
     try {
       res = await fetch(url, {
@@ -168,10 +168,17 @@ async function init() {
           sessionStorage.removeItem('nt_admin_pwd');
           localStorage.removeItem('nt_session');
         }
-      } catch(e) {
+      } catch (e) {
         sessionStorage.removeItem('nt_admin_pwd');
         localStorage.removeItem('nt_session');
       }
+    } else if (savedSession === 'guest') {
+      // Restaurar sesión de invitado (no requiere Supabase auth, lee de localStorage local)
+      S.currentUser = { username: 'guest', role: 'user', id: null };
+      S.displayName = null;
+      S.avatar = null;
+      loadLocalPrefs();
+      updateNavUser();
     } else {
       // Usuario registrado — buscar en Supabase
       try {
@@ -184,18 +191,24 @@ async function init() {
         } else {
           localStorage.removeItem('nt_session');
         }
-      } catch(e) { localStorage.removeItem('nt_session'); }
+      } catch (e) { localStorage.removeItem('nt_session'); }
       updateNavUser();
     }
   }
 
   if (!S.currentUser) {
     document.getElementById('loadingOverlay').style.display = 'none';
-    document.getElementById('authGate').classList.add('open');
+    document.getElementById('appContainer').style.display = 'none';
+    document.getElementById('page-landing').style.display = 'flex';
+    // Mantenemos la landing page libre de popups pre-cargados al inicio
+    document.getElementById('authGate').classList.remove('open');
     return;
   }
 
-  try { await loadData(); } catch(e) { toast('Error conectando a Supabase: ' + e.message, 4000); }
+  document.getElementById('appContainer').style.display = 'block';
+  document.getElementById('page-landing').style.display = 'none';
+
+  try { await loadData(); } catch (e) { toast('Error conectando a Supabase: ' + e.message, 4000); }
 
   document.getElementById('loadingOverlay').style.display = 'none';
   renderHome();
@@ -257,7 +270,7 @@ async function doLogin() {
       errEl.textContent = result.message || 'Contraseña incorrecta.';
       return;
     }
-  } catch(e) {
+  } catch (e) {
     // Si el RPC falla totalmente, continuar al login de usuario normal
   }
 
@@ -271,7 +284,7 @@ async function doLogin() {
     S.displayName = user.display_name || null;
     S.avatar = user.avatar || null;
     await loginSuccess(username, 'user', user.id);
-  } catch(e) { errEl.textContent = 'Error al conectar: ' + e.message; }
+  } catch (e) { errEl.textContent = 'Error al conectar: ' + e.message; }
 }
 
 // Hash simple para usuarios regulares (no admins)
@@ -297,6 +310,7 @@ async function doRegister() {
 
   if (!username || !pwd) { errEl.textContent = 'Completá todos los campos.'; return; }
   if (username.length < 3) { errEl.textContent = 'El usuario debe tener al menos 3 caracteres.'; return; }
+  if (username === 'guest' || username === 'invitado') { errEl.textContent = 'Nombre de usuario reservado o no permitido.'; return; }
   if (pwd.length < 4) { errEl.textContent = 'La contraseña debe tener al menos 4 caracteres.'; return; }
   if (pwd !== pwd2) { errEl.textContent = 'Las contraseñas no coinciden.'; return; }
   // Verificar que no sea un nombre de admin reservado
@@ -305,7 +319,7 @@ async function doRegister() {
     if (adminCheck && adminCheck.message !== 'Usuario no encontrado') {
       errEl.textContent = 'Ese nombre de usuario no está disponible.'; return;
     }
-  } catch(e) { /* ignorar */ }
+  } catch (e) { /* ignorar */ }
 
   errEl.textContent = 'Creando cuenta...';
   try {
@@ -320,30 +334,15 @@ async function doRegister() {
     await sb.upsert('user_data', { user_id: id, favorites: [], read_map: {}, continue_map: {} });
     toast('✓ Cuenta creada. Iniciando sesión...');
     await loginSuccess(username, 'user', id);
-  } catch(e) { errEl.textContent = 'Error: ' + e.message; }
-}
-
-function continueAsGuest() {
-  S.currentUser = { username: 'guest', role: 'user', id: null };
-  S.readMap = JSON.parse(localStorage.getItem('nt_read') || '{}');
-  S.continueMap = JSON.parse(localStorage.getItem('nt_continue') || '{}');
-  S.favorites = JSON.parse(localStorage.getItem('nt_favorites') || '[]');
-  document.getElementById('authGate').classList.remove('open');
-  updateNavUser();
-  loadData().then(() => {
-    document.getElementById('loadingOverlay').style.display = 'none';
-    renderHome();
-  }).catch(() => {
-    document.getElementById('loadingOverlay').style.display = 'none';
-    renderHome();
-  });
-  toast('Bienvenido, invitado');
+  } catch (e) { errEl.textContent = 'Error: ' + e.message; }
 }
 
 async function loginSuccess(username, role, id) {
   S.currentUser = { username, role, id };
   localStorage.setItem('nt_session', username);
   document.getElementById('authGate').classList.remove('open');
+  document.getElementById('page-landing').style.display = 'none';
+  document.getElementById('appContainer').style.display = 'block';
   if (role === 'admin') {
     S.admin = true;
     loadLocalPrefs();
@@ -379,6 +378,8 @@ function logoutUser() {
   document.getElementById('loginPass').value = '';
   document.getElementById('loginError').textContent = '';
   switchAuthTab('login');
+  document.getElementById('appContainer').style.display = 'none';
+  document.getElementById('page-landing').style.display = 'flex';
   document.getElementById('authGate').classList.add('open');
 }
 
@@ -403,7 +404,7 @@ async function loadUserData() {
     if (p.readerWidth) S.readerWidth = p.readerWidth;
     if (p.lineHeight) S.lineHeight = p.lineHeight;
     if (p.dark !== undefined) { S.dark = p.dark; document.body.classList.toggle('dark', S.dark); localStorage.setItem('nt_dark', S.dark ? '1' : '0'); }
-  } catch(e) { console.warn('No se pudo cargar user_data', e); }
+  } catch (e) { console.warn('No se pudo cargar user_data', e); }
 }
 
 async function saveUserData() {
@@ -425,7 +426,7 @@ async function saveUserData() {
     });
     // Prefs visuales en localStorage
     persistLocalPrefs();
-  } catch(e) { console.warn('No se pudo guardar user_data', e); }
+  } catch (e) { console.warn('No se pudo guardar user_data', e); }
 }
 
 // ════════════════════════════════════════════
@@ -520,9 +521,9 @@ function openUserProfile() {
 }
 
 function switchProfileTab(tab) {
-  const tabs = ['stats','favorites','history','settings'];
-  document.querySelectorAll('#modalProfile .modal-tab').forEach((b,i) => b.classList.toggle('active', tabs[i] === tab));
-  document.querySelectorAll('#modalProfile .modal-tab-panel').forEach((p,i) => p.classList.toggle('active', tabs[i] === tab));
+  const tabs = ['stats', 'favorites', 'history', 'settings'];
+  document.querySelectorAll('#modalProfile .modal-tab').forEach((b, i) => b.classList.toggle('active', tabs[i] === tab));
+  document.querySelectorAll('#modalProfile .modal-tab-panel').forEach((p, i) => p.classList.toggle('active', tabs[i] === tab));
   // Ocultar footer por defecto en tab settings (tiene su propio footer)
   const defFooter = document.getElementById('profileDefaultFooter');
   if (defFooter) defFooter.style.display = tab === 'settings' ? 'none' : '';
@@ -534,7 +535,7 @@ function switchProfileTab(tab) {
 function renderProfileStats() {
   const readCount = Object.keys(S.readMap).filter(k => S.readMap[k]).length;
   const favCount = S.favorites.length;
-  const novelsStarted = S.novels.filter(n => (n.chapters||[]).some(c => S.readMap[c.id])).length;
+  const novelsStarted = S.novels.filter(n => (n.chapters || []).some(c => S.readMap[c.id])).length;
   const displayLabel = S.displayName || S.currentUser.username;
   document.getElementById('profileStats').innerHTML = `
     <div style="margin-bottom:1rem">
@@ -556,11 +557,11 @@ function renderProfileFavorites() {
 
 function renderProfileHistory() {
   const el = document.getElementById('profileHistory');
-  const started = S.novels.filter(n => (n.chapters||[]).some(c => S.readMap[c.id]));
+  const started = S.novels.filter(n => (n.chapters || []).some(c => S.readMap[c.id]));
   if (!started.length) { el.innerHTML = '<p style="color:var(--text3);font-size:.85rem;font-style:italic;grid-column:1/-1">Sin historial aún.</p>'; return; }
   el.innerHTML = started.map(n => {
-    const readChs = (n.chapters||[]).filter(c => S.readMap[c.id]).length;
-    const total = (n.chapters||[]).length;
+    const readChs = (n.chapters || []).filter(c => S.readMap[c.id]).length;
+    const total = (n.chapters || []).length;
     return novelMiniCard(n, `${readChs}/${total} caps.`);
   }).join('');
 }
@@ -606,9 +607,9 @@ function openAdminPanel() {
 }
 
 function switchAdminTab(tab) {
-  const tabs = ['backup','reports','admins'];
-  document.querySelectorAll('#modalAdmin .modal-tab').forEach((b,i) => b.classList.toggle('active', tabs[i] === tab));
-  document.querySelectorAll('#modalAdmin .modal-tab-panel').forEach((p,i) => p.classList.toggle('active', tabs[i] === tab));
+  const tabs = ['backup', 'reports', 'admins'];
+  document.querySelectorAll('#modalAdmin .modal-tab').forEach((b, i) => b.classList.toggle('active', tabs[i] === tab));
+  document.querySelectorAll('#modalAdmin .modal-tab-panel').forEach((p, i) => p.classList.toggle('active', tabs[i] === tab));
   if (tab === 'reports') loadReports();
   if (tab === 'admins') { loadAdminsList(); clearAddAdminForm(); }
 }
@@ -621,12 +622,20 @@ async function loadAdminsList() {
     if (!pwd || !S.currentUser) { list.innerHTML = '<li style="color:var(--danger);font-size:.85rem">Sesión no disponible.</li>'; return; }
     const rows = await sb.rpc('list_admins', { p_admin_username: S.currentUser.username, p_admin_password: pwd });
     if (!rows || !rows.length) { list.innerHTML = '<li style="color:var(--text3);font-size:.85rem;font-style:italic">Sin admins.</li>'; return; }
-    list.innerHTML = rows.map(a => `
-      <li class="user-list-item">
-        <span>${esc(a.username)}</span>
-        <span class="user-badge badge-admin">${esc(a.role)}</span>
-      </li>`).join('');
-  } catch(e) {
+
+    list.innerHTML = rows.map(a => {
+      const isSelf = a.username.toLowerCase() === S.currentUser.username.toLowerCase();
+      const actionBtn = isSelf ? '' : `
+        <button class="btn btn-danger btn-sm" style="padding: 3px 8px; font-size: 0.7rem; margin-left: auto; border-radius: 6px; line-height: 1.2;" onclick="demoteAdmin('${esc(a.username)}')">✕ Degradar</button>
+      `;
+      return `
+        <li class="user-list-item" style="display: flex; align-items: center; width: 100%; gap: 10px; margin-bottom: 8px;">
+          <span>${esc(a.username)}</span>
+          <span class="user-badge badge-admin" style="margin-left: 4px; font-size: 0.72rem; padding: 2px 6px;">${esc(a.role)}</span>
+          ${actionBtn}
+        </li>`;
+    }).join('');
+  } catch (e) {
     list.innerHTML = '<li style="color:var(--danger);font-size:.85rem">Error: ' + esc(e.message) + '</li>';
   }
 }
@@ -635,13 +644,13 @@ async function updateAdminBadge() {
   try {
     const rows = await sb.query('error_reports?resolved=eq.false&select=id') || [];
     const count = rows.length;
-    ['adminBadge','adminBadgeModal'].forEach(id => {
+    ['adminBadge', 'adminBadgeModal'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
       el.textContent = count;
       el.classList.toggle('show', count > 0);
     });
-  } catch(e) {}
+  } catch (e) { }
 }
 
 async function loadReports() {
@@ -655,8 +664,8 @@ async function loadReports() {
       <div class="report-item ${r.resolved ? 'report-resolved' : ''}" id="report-${r.id}">
         <div class="report-item-header">
           <div>
-            <div class="report-item-title">${esc(r.novel_title||'Novela')} — Cap. ${r.chapter_num||'?'}</div>
-            <div class="report-item-meta">Por ${esc(r.reporter||'invitado')} · ${r.created_at ? new Date(r.created_at).toLocaleDateString('es-PY') : ''} ${r.resolved ? '· ✓ Resuelto' : ''}</div>
+            <div class="report-item-title">${esc(r.novel_title || 'Novela')} — Cap. ${r.chapter_num || '?'}</div>
+            <div class="report-item-meta">Por ${esc(r.reporter || 'invitado')} · ${r.created_at ? new Date(r.created_at).toLocaleDateString('es-PY') : ''} ${r.resolved ? '· ✓ Resuelto' : ''}</div>
           </div>
         </div>
         ${r.selected_text ? `<div class="report-item-text">"${esc(r.selected_text)}"</div>` : ''}
@@ -667,7 +676,7 @@ async function loadReports() {
           <button class="btn btn-danger btn-sm" onclick="deleteReport('${r.id}')">✕</button>
         </div>
       </div>`).join('');
-  } catch(e) { container.innerHTML = '<p style="color:var(--danger);font-size:.85rem">Error cargando reportes: ' + e.message + '</p>'; }
+  } catch (e) { container.innerHTML = '<p style="color:var(--danger);font-size:.85rem">Error cargando reportes: ' + e.message + '</p>'; }
 }
 
 async function resolveReport(id) {
@@ -679,7 +688,7 @@ async function resolveReport(id) {
     });
     loadReports();
     toast('✓ Marcado como resuelto');
-  } catch(e) { toast('Error: ' + e.message, 3000); }
+  } catch (e) { toast('Error: ' + e.message, 3000); }
 }
 
 async function deleteReport(id) {
@@ -785,7 +794,7 @@ function handleContextMenu(e) {
         if (!readerBody || !readerBody.contains(range.commonAncestorContainer)) { hideFloatBtn(); return; }
         const rect = range.getBoundingClientRect();
         showFloatBtn(rect, text);
-      } catch(e) { hideFloatBtn(); }
+      } catch (e) { hideFloatBtn(); }
     }, 200);
   });
 
@@ -810,7 +819,7 @@ function openReportModal() {
 async function submitReport() {
   if (!S.chapterId || !S.novelId) return;
   const novel = S.novels.find(n => n.id === S.novelId);
-  const chMeta = novel ? (novel.chapters||[]).find(c => c.id === S.chapterId) : null;
+  const chMeta = novel ? (novel.chapters || []).find(c => c.id === S.chapterId) : null;
   const report = {
     id: 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2),
     novel_id: S.novelId,
@@ -827,26 +836,41 @@ async function submitReport() {
     closeModal('modalReport');
     toast('✓ Reporte enviado, gracias');
     S.reportSelection = '';
-  } catch(e) { toast('Error enviando reporte: ' + e.message, 3000); }
+  } catch (e) { toast('Error enviando reporte: ' + e.message, 3000); }
 }
 
 // ════════════════════════════════════════════
 //  DATA — SUPABASE
 // ════════════════════════════════════════════
 async function loadData() {
-  const rows = await sb.getAll('novels');
-  S.novels = rows.map(r => r.data);
+  const isGuest = !S.currentUser || S.currentUser.username === 'guest';
+  const path = isGuest 
+    ? 'novels?select=*&premium=neq.true&order=updated_at.asc' 
+    : 'novels?select=*&order=updated_at.asc';
+    
+  const rows = await sb.query(path) || [];
+  S.novels = rows.map(r => {
+    const d = r.data || {};
+    d.premium = r.premium !== undefined ? r.premium : (d.premium !== undefined ? d.premium : true);
+    return d;
+  });
 }
 
 async function saveNovelToDb(novel) {
   const meta = { ...novel };
+  const premiumVal = meta.premium !== undefined ? meta.premium : true;
   if (meta.chapters) {
     meta.chapters = meta.chapters.map(c => ({
       id: c.id, num: c.num, title: c.title,
       date: c.date, hasImages: c.hasImages || false
     }));
   }
-  await sb.upsert('novels', { id: novel.id, data: meta, updated_at: new Date().toISOString() });
+  await sb.upsert('novels', { 
+    id: novel.id, 
+    data: meta, 
+    premium: premiumVal, 
+    updated_at: new Date().toISOString() 
+  });
 }
 
 async function saveChapterToDb(chapter) {
@@ -854,7 +878,7 @@ async function saveChapterToDb(chapter) {
 }
 
 async function loadChapterContent(chId) {
-  const novel = S.novels.find(n => (n.chapters||[]).find(c => c.id === chId));
+  const novel = S.novels.find(n => (n.chapters || []).find(c => c.id === chId));
   if (!novel) return null;
   const ch = novel.chapters.find(c => c.id === chId);
   if (ch && ch.text !== undefined) return ch;
@@ -881,10 +905,10 @@ async function exportData() {
     const blob = new Blob([JSON.stringify({ novels: novelsWithChapters }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'gogofansub_backup_' + new Date().toISOString().slice(0,10) + '.json';
+    a.download = 'gogofansub_backup_' + new Date().toISOString().slice(0, 10) + '.json';
     a.click();
     toast('✓ Exportado correctamente');
-  } catch(e) { toast('Error exportando: ' + e.message, 4000); }
+  } catch (e) { toast('Error exportando: ' + e.message, 4000); }
 }
 
 async function importData(input) {
@@ -905,7 +929,7 @@ async function importData(input) {
       }
       await loadData(); renderHome();
       toast('✓ Importado: ' + novels.length + ' novela(s)');
-    } catch(e) { toast('Error importando: ' + e.message, 5000); }
+    } catch (e) { toast('Error importando: ' + e.message, 5000); }
   });
   input.value = '';
 }
@@ -945,7 +969,10 @@ function updateAdminUI() {
 // ════════════════════════════════════════════
 let _filteredNovels = null;
 function renderHome() {
-  const novels = _filteredNovels || S.novels;
+  let novels = _filteredNovels || S.novels;
+  if (!S.currentUser || S.currentUser.username === 'guest') {
+    novels = novels.filter(n => n.premium !== true);
+  }
   const grid = document.getElementById('novelsGrid');
   document.getElementById('novelCount').textContent = novels.length + (novels.length === 1 ? ' novela' : ' novelas');
   updateAdminUI();
@@ -956,8 +983,8 @@ function renderHome() {
   grid.innerHTML = novels.map(n => {
     const chCount = (n.chapters || []).length;
     const continueId = S.continueMap[n.id];
-    const lastCh = continueId ? (n.chapters||[]).find(c => c.id === continueId) : null;
-    const statusClass = {'En traducción':'status-active','Completada':'status-done','Pausada':'status-paused','Abandonada':'status-drop'}[n.status]||'';
+    const lastCh = continueId ? (n.chapters || []).find(c => c.id === continueId) : null;
+    const statusClass = { 'En traducción': 'status-active', 'Completada': 'status-done', 'Pausada': 'status-paused', 'Abandonada': 'status-drop' }[n.status] || '';
     const isFav = S.favorites.includes(n.id);
     return `
     <div class="novel-card" onclick="openNovel('${n.id}')">
@@ -968,9 +995,9 @@ function renderHome() {
       </div>
       <div class="novel-card-title">${esc(n.title)}</div>
       <div class="novel-card-meta">
-        <span class="status-pill ${statusClass}">${esc(n.status||'')}</span>${chCount} cap.
+        <span class="status-pill ${statusClass}">${esc(n.status || '')}</span>${chCount} cap.
       </div>
-      ${n.tags ? `<div>${n.tags.split(',').slice(0,3).map(t=>`<span class="tag">${esc(t.trim())}</span>`).join('')}</div>` : ''}
+      ${n.tags ? `<div>${n.tags.split(',').slice(0, 3).map(t => `<span class="tag">${esc(t.trim())}</span>`).join('')}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -979,7 +1006,7 @@ function filterNovels(q) {
   if (!q.trim()) { _filteredNovels = null; }
   else {
     const lq = q.toLowerCase();
-    _filteredNovels = S.novels.filter(n => n.title.toLowerCase().includes(lq) || (n.tags||'').toLowerCase().includes(lq) || (n.author||'').toLowerCase().includes(lq));
+    _filteredNovels = S.novels.filter(n => n.title.toLowerCase().includes(lq) || (n.tags || '').toLowerCase().includes(lq) || (n.author || '').toLowerCase().includes(lq));
   }
   renderHome();
 }
@@ -988,12 +1015,16 @@ function filterNovels(q) {
 //  NOVEL PAGE
 // ════════════════════════════════════════════
 async function openNovel(id) {
+  const novel = S.novels.find(n => n.id === id);
+  if (novel && novel.premium === true && (!S.currentUser || S.currentUser.username === 'guest')) {
+    return;
+  }
   S.novelId = id; await renderNovelPage(id); showPage('novel');
 }
 async function renderNovelPage(id) {
   const novel = S.novels.find(n => n.id === id);
   if (!novel) return;
-  const chapters = (novel.chapters || []).sort((a,b) => a.num - b.num);
+  const chapters = (novel.chapters || []).sort((a, b) => a.num - b.num);
   const covEl = document.getElementById('ndCover');
   if (novel.cover) {
     covEl.innerHTML = `<img src="${novel.cover}" alt="">`;
@@ -1003,10 +1034,10 @@ async function renderNovelPage(id) {
   document.getElementById('ndTitle').textContent = novel.title;
   document.getElementById('ndAuthor').textContent = novel.author ? 'Autor: ' + novel.author : '';
   document.getElementById('ndSynopsis').textContent = novel.synopsis || '';
-  document.getElementById('ndTags').innerHTML = novel.tags ? novel.tags.split(',').map(t=>`<span class="tag">${esc(t.trim())}</span>`).join('') : '';
+  document.getElementById('ndTags').innerHTML = novel.tags ? novel.tags.split(',').map(t => `<span class="tag">${esc(t.trim())}</span>`).join('') : '';
   document.getElementById('ndChCount').textContent = chapters.length;
   document.getElementById('ndStatus').textContent = novel.status || '';
-  if (novel.createdAt) { document.getElementById('ndDate').style.display=''; document.getElementById('ndDateVal').textContent=novel.createdAt; }
+  if (novel.createdAt) { document.getElementById('ndDate').style.display = ''; document.getElementById('ndDateVal').textContent = novel.createdAt; }
   updateFavBtn();
   updateAdminUI();
   const sec = document.getElementById('chapterSection');
@@ -1025,8 +1056,8 @@ async function renderNovelPage(id) {
         </div>
         <div class="ch-right">
           ${ch.hasImages ? `<span class="ch-imgs">🖼</span>` : ''}
-          <span class="ch-date">${ch.date||''}</span>
-          <span class="ch-read ${isRead?'done':''}" title="${isRead?'Leído':'No leído'}"></span>
+          <span class="ch-date">${ch.date || ''}</span>
+          <span class="ch-read ${isRead ? 'done' : ''}" title="${isRead ? 'Leído' : 'No leído'}"></span>
           <div class="ch-admin-btns">
             <button class="ch-edit" onclick="event.stopPropagation();editChapter('${novel.id}','${ch.id}')">✏</button>
             <button class="ch-del" onclick="event.stopPropagation();confirmDeleteChapter('${novel.id}','${ch.id}')">✕</button>
@@ -1041,6 +1072,10 @@ async function renderNovelPage(id) {
 //  READER
 // ════════════════════════════════════════════
 async function openChapter(novelId, chapterId) {
+  const novel = S.novels.find(n => n.id === novelId);
+  if (novel && novel.premium === true && (!S.currentUser || S.currentUser.username === 'guest')) {
+    return;
+  }
   S.novelId = novelId; S.chapterId = chapterId;
   S.continueMap[novelId] = chapterId;
   saveUserData();
@@ -1049,7 +1084,7 @@ async function openChapter(novelId, chapterId) {
 async function renderReader() {
   const novel = S.novels.find(n => n.id === S.novelId);
   if (!novel) return;
-  const chapters = (novel.chapters||[]).sort((a,b) => a.num - b.num);
+  const chapters = (novel.chapters || []).sort((a, b) => a.num - b.num);
   const ch = await loadChapterContent(S.chapterId);
   if (!ch) return;
   S.readMap[ch.id] = true;
@@ -1066,7 +1101,7 @@ async function renderReader() {
   document.getElementById('readerContent').style.maxWidth = S.readerWidth + 'px';
   document.getElementById('readerNav').style.maxWidth = S.readerWidth + 'px';
   let html = parseText(ch.text || '', ch.images || []);
-  if (ch.notes) { html += `<div class="translator-note"><strong>Nota del traductor</strong>${esc(ch.notes).replace(/\n/g,'<br>')}</div>`; }
+  if (ch.notes) { html += `<div class="translator-note"><strong>Nota del traductor</strong>${esc(ch.notes).replace(/\n/g, '<br>')}</div>`; }
   body.innerHTML = html;
   const idx = chapters.findIndex(c => c.id === S.chapterId);
   document.getElementById('prevBtn').disabled = idx <= 0;
@@ -1074,12 +1109,12 @@ async function renderReader() {
   document.getElementById('progressBar').style.width = '0%';
 }
 function parseText(text, images) {
-  return text.split(/\n\n+/).filter(p=>p.trim()).map(para => {
-    let line = para.replace(/\n/g,'<br>');
-    line = line.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-    line = line.replace(/_(.+?)_/g,'<em>$1</em>');
-    line = line.replace(/\[img:(\d+)\]/g, (_,i) => {
-      const src = images[parseInt(i)-1];
+  return text.split(/\n\n+/).filter(p => p.trim()).map(para => {
+    let line = para.replace(/\n/g, '<br>');
+    line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    line = line.replace(/_(.+?)_/g, '<em>$1</em>');
+    line = line.replace(/\[img:(\d+)\]/g, (_, i) => {
+      const src = images[parseInt(i) - 1];
       return src ? `<img src="${src}" alt="Imagen ${i}">` : '';
     });
     return `<p>${line}</p>`;
@@ -1088,10 +1123,10 @@ function parseText(text, images) {
 async function navigateChapter(dir) {
   const novel = S.novels.find(n => n.id === S.novelId);
   if (!novel) return;
-  const chapters = (novel.chapters||[]).sort((a,b) => a.num - b.num);
+  const chapters = (novel.chapters || []).sort((a, b) => a.num - b.num);
   const idx = chapters.findIndex(c => c.id === S.chapterId);
   const next = chapters[idx + dir];
-  if (next) { S.chapterId = next.id; S.continueMap[S.novelId] = next.id; saveUserData(); await renderReader(); window.scrollTo(0,0); }
+  if (next) { S.chapterId = next.id; S.continueMap[S.novelId] = next.id; saveUserData(); await renderReader(); window.scrollTo(0, 0); }
 }
 function goBackToNovel() { showPage('novel'); renderNovelPage(S.novelId); }
 function updateProgressBar() {
@@ -1103,17 +1138,17 @@ function updateProgressBar() {
 async function openChPicker() {
   const novel = S.novels.find(n => n.id === S.novelId);
   if (!novel) return;
-  const chapters = (novel.chapters||[]).sort((a,b)=>a.num-b.num);
+  const chapters = (novel.chapters || []).sort((a, b) => a.num - b.num);
   document.getElementById('chSelectorList').innerHTML = chapters.map(ch => `
-    <li class="ch-selector-item ${ch.id===S.chapterId?'current':''} ${S.readMap[ch.id]?'read-ch':''}"
+    <li class="ch-selector-item ${ch.id === S.chapterId ? 'current' : ''} ${S.readMap[ch.id] ? 'read-ch' : ''}"
         onclick="selectChapter('${ch.id}')">
       <span style="font-size:.73rem;color:var(--text3);min-width:32px">Cap. ${ch.num}</span>
-      <span>${esc(ch.title||'Sin título')}</span>
+      <span>${esc(ch.title || 'Sin título')}</span>
     </li>`).join('');
   openModal('modalChPicker');
 }
 async function selectChapter(id) {
-  S.chapterId = id; closeModal('modalChPicker'); await renderReader(); window.scrollTo(0,0);
+  S.chapterId = id; closeModal('modalChPicker'); await renderReader(); window.scrollTo(0, 0);
 }
 
 // ════════════════════════════════════════════
@@ -1192,12 +1227,13 @@ function openEditNovel() {
   if (!novel) return;
   S.editingNovelId = novel.id;
   document.getElementById('novelModalH').textContent = 'Editar Novela';
-  document.getElementById('nTitle').value = novel.title||'';
-  document.getElementById('nAuthor').value = novel.author||'';
-  document.getElementById('nSynopsis').value = novel.synopsis||'';
-  document.getElementById('nTags').value = novel.tags||'';
-  document.getElementById('nNotes').value = novel.notes||'';
-  document.getElementById('nStatus').value = novel.status||'En traducción';
+  document.getElementById('nTitle').value = novel.title || '';
+  document.getElementById('nAuthor').value = novel.author || '';
+  document.getElementById('nSynopsis').value = novel.synopsis || '';
+  document.getElementById('nTags').value = novel.tags || '';
+  document.getElementById('nNotes').value = novel.notes || '';
+  document.getElementById('nStatus').value = novel.status || 'En traducción';
+  document.getElementById('nPremium').checked = novel.premium === true;
   if (novel.cover && novel.cover.startsWith('data:')) {
     document.getElementById('coverPreviewImg').src = novel.cover;
     document.getElementById('coverPreview').style.display = 'block';
@@ -1205,8 +1241,9 @@ function openEditNovel() {
   openModal('modalNovel');
 }
 function clearNovelForm() {
-  ['nTitle','nAuthor','nSynopsis','nTags','nNotes'].forEach(id => document.getElementById(id).value='');
+  ['nTitle', 'nAuthor', 'nSynopsis', 'nTags', 'nNotes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('nStatus').value = 'En traducción';
+  document.getElementById('nPremium').checked = false;
   document.getElementById('novelCoverInput').value = '';
   document.getElementById('coverPreview').style.display = 'none';
   document.getElementById('coverPreviewImg').src = '';
@@ -1222,6 +1259,7 @@ async function saveNovel() {
   if (!title) { toast('El título es obligatorio', 2500); return; }
   const img = document.getElementById('coverPreviewImg');
   let cover = (img.src && img.src.startsWith('data:')) ? img.src : '';
+  const premium = document.getElementById('nPremium').checked;
   if (S.editingNovelId) {
     const novel = S.novels.find(n => n.id === S.editingNovelId);
     novel.title = title; novel.author = document.getElementById('nAuthor').value.trim();
@@ -1229,15 +1267,18 @@ async function saveNovel() {
     novel.tags = document.getElementById('nTags').value.trim();
     novel.notes = document.getElementById('nNotes').value.trim();
     novel.status = document.getElementById('nStatus').value;
+    novel.premium = premium;
     if (cover) novel.cover = cover;
     await saveNovelToDb(novel);
     closeModal('modalNovel'); renderNovelPage(S.editingNovelId); renderHome(); toast('✓ Novela actualizada');
   } else {
     const id = 'n_' + Date.now();
-    const novel = { id, title, author: document.getElementById('nAuthor').value.trim(),
+    const novel = {
+      id, title, author: document.getElementById('nAuthor').value.trim(),
       synopsis: document.getElementById('nSynopsis').value.trim(), tags: document.getElementById('nTags').value.trim(),
       notes: document.getElementById('nNotes').value.trim(), status: document.getElementById('nStatus').value,
-      cover, chapters: [], createdAt: new Date().toLocaleDateString('es-PY') };
+      premium, cover, chapters: [], createdAt: new Date().toLocaleDateString('es-PY')
+    };
     S.novels.push(novel);
     await saveNovelToDb(novel);
     closeModal('modalNovel'); renderHome(); toast('✓ Novela agregada');
@@ -1266,7 +1307,7 @@ function openAddChapter() {
   document.getElementById('previewSection').style.display = 'none';
   const novel = S.novels.find(n => n.id === S.novelId);
   if (novel && novel.chapters && novel.chapters.length > 0) {
-    document.getElementById('cNum').value = Math.max(...novel.chapters.map(c=>c.num)) + 1;
+    document.getElementById('cNum').value = Math.max(...novel.chapters.map(c => c.num)) + 1;
   } else { document.getElementById('cNum').value = 1; }
   openModal('modalChapter');
 }
@@ -1276,9 +1317,9 @@ async function editChapter(novelId, chId) {
   if (!ch) return;
   document.getElementById('chModalH').textContent = 'Editar Capítulo ' + ch.num;
   document.getElementById('cNum').value = ch.num;
-  document.getElementById('cTitle').value = ch.title||'';
-  document.getElementById('chapterTextArea').value = ch.text||'';
-  document.getElementById('cNotes').value = ch.notes||'';
+  document.getElementById('cTitle').value = ch.title || '';
+  document.getElementById('chapterTextArea').value = ch.text || '';
+  document.getElementById('cNotes').value = ch.notes || '';
   S.chImages = ch.images ? [...ch.images] : [];
   renderImgThumbs();
   document.getElementById('previewSection').style.display = 'none';
@@ -1294,29 +1335,29 @@ function loadChImages(input) {
 function renderImgThumbs() {
   document.getElementById('imgThumbs').innerHTML = S.chImages.map((src, i) => `
     <div class="img-thumb">
-      <img src="${src.startsWith('data:')?src:''}" alt="">
+      <img src="${src.startsWith('data:') ? src : ''}" alt="">
       <button class="rm-img" onclick="S.chImages.splice(${i},1);renderImgThumbs()">×</button>
     </div>`).join('');
 }
 function ins(open, close) {
   const ta = document.getElementById('chapterTextArea');
   const s = ta.selectionStart, e = ta.selectionEnd;
-  ta.value = ta.value.substring(0,s)+open+ta.value.substring(s,e)+close+ta.value.substring(e);
-  ta.focus(); ta.setSelectionRange(s+open.length, e+open.length);
+  ta.value = ta.value.substring(0, s) + open + ta.value.substring(s, e) + close + ta.value.substring(e);
+  ta.focus(); ta.setSelectionRange(s + open.length, e + open.length);
 }
 function insBreak() {
   const ta = document.getElementById('chapterTextArea');
   const p = ta.selectionStart;
-  ta.value = ta.value.substring(0,p)+'\n\n'+ta.value.substring(p);
-  ta.focus(); ta.setSelectionRange(p+2,p+2);
+  ta.value = ta.value.substring(0, p) + '\n\n' + ta.value.substring(p);
+  ta.focus(); ta.setSelectionRange(p + 2, p + 2);
 }
 function insImgTag() {
-  const n = S.chImages.length+1;
+  const n = S.chImages.length + 1;
   const ta = document.getElementById('chapterTextArea');
   const p = ta.selectionStart;
   const tag = `[img:${n}]`;
-  ta.value = ta.value.substring(0,p)+tag+ta.value.substring(p);
-  ta.focus(); ta.setSelectionRange(p+tag.length,p+tag.length);
+  ta.value = ta.value.substring(0, p) + tag + ta.value.substring(p);
+  ta.focus(); ta.setSelectionRange(p + tag.length, p + tag.length);
 }
 function togglePreview() {
   const sec = document.getElementById('previewSection');
@@ -1346,10 +1387,12 @@ async function saveChapter() {
     }
   } else {
     const id = 'c_' + Date.now();
-    const ch = { id, num, title: document.getElementById('cTitle').value.trim(),
+    const ch = {
+      id, num, title: document.getElementById('cTitle').value.trim(),
       text, notes: document.getElementById('cNotes').value.trim(),
       images: savedImages, hasImages: savedImages.length > 0,
-      date: new Date().toLocaleDateString('es-PY'), novelId: novel.id };
+      date: new Date().toLocaleDateString('es-PY'), novelId: novel.id
+    };
     novel.chapters.push(ch);
     await saveChapterToDb(ch);
     await saveNovelToDb(novel);
@@ -1418,7 +1461,7 @@ async function saveUserProfile() {
     document.getElementById('profileTitle').textContent = '👤 ' + (S.displayName || S.currentUser.username);
     toast('✓ Perfil actualizado');
     closeModal('modalProfile');
-  } catch(e) { toast('Error: ' + e.message, 3000); }
+  } catch (e) { toast('Error: ' + e.message, 3000); }
 }
 
 async function changeUserPassword() {
@@ -1441,7 +1484,7 @@ async function changeUserPassword() {
     document.getElementById('profileNewPwd').value = '';
     document.getElementById('profileNewPwd2').value = '';
     toast('✓ Contraseña cambiada con éxito');
-  } catch(e) { toast('Error: ' + e.message, 3000); }
+  } catch (e) { toast('Error: ' + e.message, 3000); }
 }
 
 // ════════════════════════════════════════════
@@ -1508,7 +1551,7 @@ async function saveAdminProfile() {
     updateNavUser();
     toast('✓ Preferencias guardadas');
     closeModal('modalAdminPrefs');
-  } catch(e) { toast('Error: ' + e.message, 3000); }
+  } catch (e) { toast('Error: ' + e.message, 3000); }
 }
 
 async function changeAdminPassword() {
@@ -1534,27 +1577,25 @@ async function changeAdminPassword() {
     document.getElementById('adminNewPwd').value = '';
     document.getElementById('adminNewPwd2').value = '';
     toast('✓ Contraseña de admin cambiada con éxito');
-  } catch(e) { toast('Error: ' + e.message, 3000); }
+  } catch (e) { toast('Error: ' + e.message, 3000); }
 }
 
 // ════════════════════════════════════════════
 //  REGISTRAR NUEVO ADMIN
 // ════════════════════════════════════════════
 function clearAddAdminForm() {
-  const fields = ['newAdminUser','newAdminPass','newAdminConfirmPwd'];
+  const fields = ['newAdminUser', 'newAdminPass', 'newAdminConfirmPwd'];
   fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 }
 
 async function registerNewAdmin() {
   const newUser = document.getElementById('newAdminUser').value.trim().toLowerCase();
   const newPass = document.getElementById('newAdminPass').value;
-  const confirmPwd = document.getElementById('newAdminConfirmPwd').value;
-  if (!newUser || !newPass || !confirmPwd) { toast('Completá todos los campos', 2500); return; }
+  if (!newUser || !newPass) { toast('Completá todos los campos', 2500); return; }
   if (newUser.length < 3) { toast('El usuario debe tener al menos 3 caracteres', 2500); return; }
   if (newPass.length < 4) { toast('La contraseña debe tener al menos 4 caracteres', 2500); return; }
   const sessionPwd = sessionStorage.getItem('nt_admin_pwd');
   if (!sessionPwd || !S.currentUser) { toast('Sesión no disponible', 2500); return; }
-  if (sessionPwd !== confirmPwd) { toast('Tu contraseña actual es incorrecta', 2500); return; }
   toast('Registrando admin...', 1500);
   try {
     const result = await sb.rpc('create_new_admin', {
@@ -1567,7 +1608,56 @@ async function registerNewAdmin() {
     clearAddAdminForm();
     await loadAdminsList();
     toast('✓ Admin "' + newUser + '" registrado con éxito');
-  } catch(e) { toast('Error: ' + e.message, 3000); }
+  } catch (e) { toast('Error: ' + e.message, 3000); }
+}
+
+function openAuthFromLanding(tab) {
+  switchAuthTab(tab);
+  openModal('authGate');
+}
+
+async function promoteLectorToAdmin() {
+  const targetUser = document.getElementById('promoteUserTarget').value.trim().toLowerCase();
+  if (!targetUser) { toast('Completá todos los campos', 2500); return; }
+
+  const sessionPwd = sessionStorage.getItem('nt_admin_pwd');
+  if (!sessionPwd || !S.currentUser) { toast('Sesión no disponible', 2500); return; }
+
+  toast('Promoviendo usuario...', 1500);
+  try {
+    const result = await sb.rpc('change_user_role', {
+      p_admin_username: S.currentUser.username,
+      p_admin_password: sessionPwd,
+      p_target_username: targetUser,
+      p_new_role: 'admin'
+    });
+    if (!result || !result.success) { toast(result?.message || 'Error al cambiar rol', 3000); return; }
+    document.getElementById('promoteUserTarget').value = '';
+    document.getElementById('promoteConfirmPwd').value = '';
+    await loadAdminsList();
+    toast('✓ ' + (result.message || 'Usuario promovido a Admin. Contraseña temporal establecida como: GoGodSaporu'), 4500);
+  } catch (e) { toast('Error: ' + e.message, 3000); }
+}
+
+async function demoteAdmin(targetUser) {
+  if (!confirm(`¿Estás seguro de que querés DEGRADAR al administrador "${targetUser}" a usuario/lector normal?\n\nSu contraseña temporal se cambiará a: GoGodSaporu`)) {
+    return;
+  }
+  const sessionPwd = sessionStorage.getItem('nt_admin_pwd');
+  if (!sessionPwd || !S.currentUser) { toast('Sesión no disponible', 2500); return; }
+
+  toast('Degradando administrador...', 1500);
+  try {
+    const result = await sb.rpc('change_user_role', {
+      p_admin_username: S.currentUser.username,
+      p_admin_password: sessionPwd,
+      p_target_username: targetUser.toLowerCase(),
+      p_new_role: 'user'
+    });
+    if (!result || !result.success) { toast(result?.message || 'Error al cambiar rol', 3000); return; }
+    await loadAdminsList();
+    toast('✓ ' + (result.message || 'Administrador degradado a Lector. Contraseña temporal establecida como: GoGodSaporu'), 4500);
+  } catch (e) { toast('Error: ' + e.message, 3000); }
 }
 
 // ════════════════════════════════════════════
@@ -1588,7 +1678,7 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 //  TOAST
 // ════════════════════════════════════════════
 let _tt = null;
-function toast(msg, dur=2200) {
+function toast(msg, dur = 2200) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
   if (_tt) clearTimeout(_tt);
@@ -1596,7 +1686,31 @@ function toast(msg, dur=2200) {
 }
 
 function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+async function continueAsGuest() {
+  S.currentUser = { username: 'guest', role: 'user', id: null };
+  localStorage.setItem('nt_session', 'guest');
+  
+  // Limpiar credenciales administrativas activas en sesión
+  sessionStorage.removeItem('nt_admin_pwd');
+  S.admin = false;
+  
+  document.getElementById('page-landing').style.display = 'none';
+  document.getElementById('appContainer').style.display = 'block';
+  updateNavUser();
+  updateAdminUI();
+  
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  try {
+    await loadData();
+  } catch (e) {
+    console.warn('Error al cargar datos:', e);
+  }
+  document.getElementById('loadingOverlay').style.display = 'none';
+  
+  renderHome();
 }
 
 init();
