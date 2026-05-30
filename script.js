@@ -255,10 +255,10 @@ async function doLogin() {
 
   // Intentar login como admin primero (via RPC seguro)
   try {
-    const result = await sb.rpc('login_admin', { p_username: username, p_password: pwd });
+    const result = await sb.rpc('login_admin', { p_username: username, p_password: hashPwd(pwd) });
     if (result && result.success) {
-      // Guardar contraseña en sessionStorage para restaurar sesión al recargar
-      sessionStorage.setItem('nt_admin_pwd', pwd);
+      // Guardar contraseña hasheada en sessionStorage para restaurar sesión al recargar
+      sessionStorage.setItem('nt_admin_pwd', hashPwd(pwd));
       S.currentUser = { username: result.username, role: 'admin', id: 'admin_' + result.username, avatar: result.avatar };
       await loginSuccess(username, 'admin', 'admin_' + username);
       return;
@@ -844,10 +844,10 @@ async function submitReport() {
 // ════════════════════════════════════════════
 async function loadData() {
   const isGuest = !S.currentUser || S.currentUser.username === 'guest';
-  const path = isGuest 
-    ? 'novels?select=*&premium=neq.true&order=updated_at.asc' 
+  const path = isGuest
+    ? 'novels?select=*&premium=neq.true&order=updated_at.asc'
     : 'novels?select=*&order=updated_at.asc';
-    
+
   const rows = await sb.query(path) || [];
   S.novels = rows.map(r => {
     const d = r.data || {};
@@ -865,11 +865,11 @@ async function saveNovelToDb(novel) {
       date: c.date, hasImages: c.hasImages || false
     }));
   }
-  await sb.upsert('novels', { 
-    id: novel.id, 
-    data: meta, 
-    premium: premiumVal, 
-    updated_at: new Date().toISOString() 
+  await sb.upsert('novels', {
+    id: novel.id,
+    data: meta,
+    premium: premiumVal,
+    updated_at: new Date().toISOString()
   });
 }
 
@@ -1444,18 +1444,22 @@ async function saveUserProfile() {
   const confirmPwd = document.getElementById('profileConfirmPwd').value;
   if (!confirmPwd) { toast('Ingresá tu contraseña para guardar cambios', 2500); return; }
   const displayName = document.getElementById('profileDisplayName').value.trim();
-  const avatarToSave = S.pendingAvatar !== undefined ? S.pendingAvatar : undefined;
+  const avatarToSave = S.pendingAvatar !== undefined ? S.pendingAvatar : (S.currentUser.avatar || S.avatar);
   toast('Guardando...', 1500);
   try {
     const result = await sb.rpc('update_user_profile', {
       p_user_id: S.currentUser.id,
       p_password: hashPwd(confirmPwd),
-      p_display_name: displayName,
-      p_avatar: avatarToSave !== undefined ? avatarToSave : null
+      p_display_name: displayName || null,
+      p_avatar: avatarToSave
     });
     if (!result || !result.success) { toast(result?.message || 'Error al guardar', 3000); return; }
-    if (displayName) S.displayName = displayName;
-    if (avatarToSave !== undefined) { S.avatar = avatarToSave; }
+    S.displayName = displayName || null;
+    S.avatar = avatarToSave;
+    if (S.currentUser) {
+      S.currentUser.avatar = avatarToSave;
+      S.currentUser.displayName = displayName || null;
+    }
     S.pendingAvatar = undefined;
     updateNavUser();
     document.getElementById('profileTitle').textContent = '👤 ' + (S.displayName || S.currentUser.username);
@@ -1532,20 +1536,21 @@ async function saveAdminProfile() {
   const pwd = sessionStorage.getItem('nt_admin_pwd');
   if (!pwd) { toast('Sesión expirada, volvé a iniciar sesión', 3000); return; }
   const displayName = document.getElementById('adminDisplayName').value.trim();
-  const avatarToSave = S.adminPendingAvatar !== undefined ? S.adminPendingAvatar : undefined;
+  const avatarToSave = S.adminPendingAvatar !== undefined ? S.adminPendingAvatar : (S.currentUser.avatar || S.avatar);
   toast('Guardando...', 1500);
   try {
     const result = await sb.rpc('update_admin_profile', {
       p_username: S.currentUser.username,
       p_password: pwd,
       p_display_name: displayName || null,
-      p_avatar: avatarToSave !== undefined ? avatarToSave : null
+      p_avatar: avatarToSave
     });
     if (!result || !result.success) { toast(result?.message || 'Error al guardar', 3000); return; }
-    if (displayName) S.displayName = displayName;
-    if (avatarToSave !== undefined) {
-      S.avatar = avatarToSave;
-      if (S.currentUser) S.currentUser.avatar = avatarToSave;
+    S.displayName = displayName || null;
+    S.avatar = avatarToSave;
+    if (S.currentUser) {
+      S.currentUser.avatar = avatarToSave;
+      S.currentUser.displayName = displayName || null;
     }
     S.adminPendingAvatar = undefined;
     updateNavUser();
@@ -1563,16 +1568,16 @@ async function changeAdminPassword() {
   if (newPwd.length < 4) { toast('La nueva contraseña debe tener al menos 4 caracteres', 2500); return; }
   if (newPwd !== newPwd2) { toast('Las nuevas contraseñas no coinciden', 2500); return; }
   const sessionPwd = sessionStorage.getItem('nt_admin_pwd');
-  if (sessionPwd !== oldPwd) { toast('La contraseña actual no es correcta', 2500); return; }
+  if (sessionPwd !== hashPwd(oldPwd)) { toast('La contraseña actual no es correcta', 2500); return; }
   toast('Cambiando contraseña...', 1500);
   try {
     const result = await sb.rpc('change_admin_password', {
       p_username: S.currentUser.username,
-      p_old_password: oldPwd,
-      p_new_password: newPwd
+      p_old_password: hashPwd(oldPwd),
+      p_new_password: hashPwd(newPwd)
     });
     if (!result || !result.success) { toast(result?.message || 'Error', 3000); return; }
-    sessionStorage.setItem('nt_admin_pwd', newPwd);
+    sessionStorage.setItem('nt_admin_pwd', hashPwd(newPwd));
     document.getElementById('adminOldPwd').value = '';
     document.getElementById('adminNewPwd').value = '';
     document.getElementById('adminNewPwd2').value = '';
@@ -1602,7 +1607,7 @@ async function registerNewAdmin() {
       p_admin_username: S.currentUser.username,
       p_admin_password: sessionPwd,
       p_new_username: newUser,
-      p_new_password: newPass
+      p_new_password: hashPwd(newPass)
     });
     if (!result || !result.success) { toast(result?.message || 'Error al registrar', 3000); return; }
     clearAddAdminForm();
@@ -1633,31 +1638,29 @@ async function promoteLectorToAdmin() {
     });
     if (!result || !result.success) { toast(result?.message || 'Error al cambiar rol', 3000); return; }
     document.getElementById('promoteUserTarget').value = '';
-    document.getElementById('promoteConfirmPwd').value = '';
     await loadAdminsList();
-    toast('✓ ' + (result.message || 'Usuario promovido a Admin. Contraseña temporal establecida como: GoGodSaporu'), 4500);
+    toast('✓ ' + (result.message || 'Usuario promovido a Admin con éxito'), 4000);
   } catch (e) { toast('Error: ' + e.message, 3000); }
 }
 
 async function demoteAdmin(targetUser) {
-  if (!confirm(`¿Estás seguro de que querés DEGRADAR al administrador "${targetUser}" a usuario/lector normal?\n\nSu contraseña temporal se cambiará a: GoGodSaporu`)) {
-    return;
-  }
-  const sessionPwd = sessionStorage.getItem('nt_admin_pwd');
-  if (!sessionPwd || !S.currentUser) { toast('Sesión no disponible', 2500); return; }
+  openConfirm(`¿Estás seguro de que querés DEGRADAR al administrador "${targetUser}" a lector normal?`, async () => {
+    const sessionPwd = sessionStorage.getItem('nt_admin_pwd');
+    if (!sessionPwd || !S.currentUser) { toast('Sesión no disponible', 2500); return; }
 
-  toast('Degradando administrador...', 1500);
-  try {
-    const result = await sb.rpc('change_user_role', {
-      p_admin_username: S.currentUser.username,
-      p_admin_password: sessionPwd,
-      p_target_username: targetUser.toLowerCase(),
-      p_new_role: 'user'
-    });
-    if (!result || !result.success) { toast(result?.message || 'Error al cambiar rol', 3000); return; }
-    await loadAdminsList();
-    toast('✓ ' + (result.message || 'Administrador degradado a Lector. Contraseña temporal establecida como: GoGodSaporu'), 4500);
-  } catch (e) { toast('Error: ' + e.message, 3000); }
+    toast('Degradando administrador...', 1500);
+    try {
+      const result = await sb.rpc('change_user_role', {
+        p_admin_username: S.currentUser.username,
+        p_admin_password: sessionPwd,
+        p_target_username: targetUser.toLowerCase(),
+        p_new_role: 'user'
+      });
+      if (!result || !result.success) { toast(result?.message || 'Error al cambiar rol', 3000); return; }
+      await loadAdminsList();
+      toast('✓ ' + (result.message || 'Administrador degradado a Lector con éxito'));
+    } catch (e) { toast('Error: ' + e.message, 3000); }
+  });
 }
 
 // ════════════════════════════════════════════
@@ -1692,16 +1695,16 @@ function esc(s) {
 async function continueAsGuest() {
   S.currentUser = { username: 'guest', role: 'user', id: null };
   localStorage.setItem('nt_session', 'guest');
-  
+
   // Limpiar credenciales administrativas activas en sesión
   sessionStorage.removeItem('nt_admin_pwd');
   S.admin = false;
-  
+
   document.getElementById('page-landing').style.display = 'none';
   document.getElementById('appContainer').style.display = 'block';
   updateNavUser();
   updateAdminUI();
-  
+
   document.getElementById('loadingOverlay').style.display = 'flex';
   try {
     await loadData();
@@ -1709,7 +1712,7 @@ async function continueAsGuest() {
     console.warn('Error al cargar datos:', e);
   }
   document.getElementById('loadingOverlay').style.display = 'none';
-  
+
   renderHome();
 }
 
