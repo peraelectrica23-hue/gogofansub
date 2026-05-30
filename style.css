@@ -240,7 +240,7 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
 /* AUTH */
 .auth-gate{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:400;align-items:center;justify-content:center;}
 .auth-gate.open{display:flex;}
-.auth-box{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:2rem;width:340px;}
+.auth-box{position:relative;background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:2rem;width:340px;}
 .auth-box h3{font-family:'Crimson Pro',serif;font-size:1.4rem;font-weight:600;margin-bottom:.3rem;}
 .auth-box p{color:var(--text3);font-size:.83rem;margin-bottom:1.4rem;}
 .auth-tabs{display:flex;gap:0;margin-bottom:1.4rem;border:1px solid var(--border2);border-radius:8px;overflow:hidden;}
