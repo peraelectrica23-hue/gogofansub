@@ -307,6 +307,26 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
 .modal-tab-panel{display:none;}
 .modal-tab-panel.active{display:block;}
 
+/* AVATAR EN NAV */
+.nav-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+
+/* SELECTOR DE AVATAR */
+.avatar-selector{display:flex;align-items:center;gap:1rem;margin-bottom:1rem;}
+.avatar-preview{width:64px;height:64px;border-radius:50%;background:var(--accent);color:#fff;font-size:1.5rem;font-weight:600;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px solid var(--border2);flex-shrink:0;}
+.avatar-preview img{width:100%;height:100%;object-fit:cover;}
+.avatar-upload-btn{background:none;border:1px solid var(--border2);color:var(--text2);padding:6px 14px;border-radius:8px;font-size:.8rem;cursor:pointer;transition:all .2s;}
+.avatar-upload-btn:hover{background:var(--bg2);}
+.avatar-upload-btn.danger-btn{color:var(--danger);border-color:rgba(163,45,45,.3);}
+.avatar-upload-btn.danger-btn:hover{background:var(--danger-bg);}
+
+/* SECCIONES DE CONFIGURACIÓN */
+.settings-section{margin-bottom:1.5rem;padding-bottom:1.2rem;border-bottom:1px solid var(--border);}
+.settings-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.settings-section h4{font-size:.78rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.9rem;}
+
+/* MODAL PREFERENCIAS ADMIN */
+.admin-prefs-modal .modal{max-width:440px;}
+
 @media(max-width:600px){
   .novel-header{flex-direction:column;}
   .novel-cover-lg{width:110px;}
@@ -352,6 +372,7 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
     <div class="user-dropdown-role" id="ddRole">–</div>
   </div>
   <button class="dropdown-item" onclick="openUserProfile()">👤 Mi perfil</button>
+  <button class="dropdown-item admin-only" style="display:none" onclick="closeUserMenu();openAdminPrefs()">⚙ Preferencias</button>
   <button class="dropdown-item admin-only" style="display:none" onclick="closeUserMenu();openAdminPanel()">🛠 Panel admin <span class="notif-badge" id="adminBadge"></span></button>
   <hr class="dropdown-sep">
   <button class="dropdown-item danger" onclick="logoutUser()">↩ Cerrar sesión</button>
@@ -572,6 +593,7 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
     <!-- REGISTER -->
     <div id="registerForm" style="display:none">
       <div class="field"><label>Nombre de usuario</label><input type="text" id="regUser" placeholder="Elegí un nombre de usuario" autocomplete="username"></div>
+      <div class="field"><label>Nombre visible (opcional)</label><input type="text" id="regDisplayName" placeholder="Cómo querés que te vean"></div>
       <div class="field"><label>Contraseña</label><input type="password" id="regPass" placeholder="Contraseña" autocomplete="new-password"></div>
       <div class="field"><label>Confirmar contraseña</label><input type="password" id="regPass2" placeholder="Repetí la contraseña" onkeydown="if(event.key==='Enter')doRegister()"></div>
       <div class="auth-error" id="registerError"></div>
@@ -590,6 +612,7 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
       <button class="modal-tab active" onclick="switchProfileTab('stats')">Estadísticas</button>
       <button class="modal-tab" onclick="switchProfileTab('favorites')">Favoritos</button>
       <button class="modal-tab" onclick="switchProfileTab('history')">Historial</button>
+      <button class="modal-tab" onclick="switchProfileTab('settings')">Configuración</button>
     </div>
     <div class="modal-tab-panel active" id="profileTabStats">
       <div id="profileStats"></div>
@@ -600,7 +623,44 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
     <div class="modal-tab-panel" id="profileTabHistory">
       <div class="profile-novels-grid" id="profileHistory"></div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-tab-panel" id="profileTabSettings">
+      <!-- Avatar -->
+      <div class="settings-section">
+        <h4>Foto de perfil</h4>
+        <div class="avatar-selector">
+          <div class="avatar-preview" id="profileAvatarPreview"></div>
+          <div>
+            <input type="file" id="profileAvatarInput" accept="image/*" style="display:none" onchange="loadProfileAvatar(this)">
+            <button class="avatar-upload-btn" onclick="document.getElementById('profileAvatarInput').click()">📷 Cambiar foto</button>
+            <button class="avatar-upload-btn danger-btn" style="margin-left:6px" onclick="removeProfileAvatar()">✕ Quitar</button>
+          </div>
+        </div>
+      </div>
+      <!-- Nombre visible -->
+      <div class="settings-section">
+        <h4>Nombre visible</h4>
+        <div class="field" style="margin-bottom:.5rem"><label>Nombre que verán los demás</label><input type="text" id="profileDisplayName" placeholder="Tu nombre visible"></div>
+        <p style="font-size:.76rem;color:var(--text3)">Tu usuario de login no cambia, solo el nombre que se muestra.</p>
+      </div>
+      <!-- Cambiar contraseña -->
+      <div class="settings-section">
+        <h4>Cambiar contraseña</h4>
+        <div class="field"><label>Contraseña actual</label><input type="password" id="profileOldPwd" placeholder="Contraseña actual"></div>
+        <div class="field"><label>Nueva contraseña</label><input type="password" id="profileNewPwd" placeholder="Nueva contraseña (mín. 4 caracteres)"></div>
+        <div class="field"><label>Confirmar nueva contraseña</label><input type="password" id="profileNewPwd2" placeholder="Repetí la nueva contraseña"></div>
+        <button class="btn btn-secondary btn-sm" onclick="changeUserPassword()">🔒 Cambiar contraseña</button>
+      </div>
+      <!-- Confirmar con contraseña para guardar cambios de perfil -->
+      <div class="settings-section">
+        <h4>Confirmar cambios de perfil</h4>
+        <div class="field"><label>Contraseña actual (requerida para guardar)</label><input type="password" id="profileConfirmPwd" placeholder="Tu contraseña actual"></div>
+        <div class="modal-footer" style="padding-top:0;border-top:none;margin-top:.5rem">
+          <button class="btn btn-secondary" onclick="closeModal('modalProfile')">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveUserProfile()">💾 Guardar perfil</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" id="profileDefaultFooter">
       <button class="btn btn-secondary" onclick="closeModal('modalProfile')">Cerrar</button>
     </div>
   </div>
@@ -637,6 +697,17 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
     </div>
 
     <div class="modal-tab-panel" id="adminTabAdmins">
+      <!-- Registrar nuevo admin -->
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+        <div style="font-size:.78rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.8rem">➕ Registrar nuevo admin</div>
+        <div class="field-row" style="margin-bottom:.6rem">
+          <div class="field"><label>Usuario nuevo</label><input type="text" id="newAdminUser" placeholder="Nombre de usuario"></div>
+          <div class="field"><label>Contraseña</label><input type="password" id="newAdminPass" placeholder="Contraseña"></div>
+        </div>
+        <div class="field" style="margin-bottom:.6rem"><label>Tu contraseña (para confirmar)</label><input type="password" id="newAdminConfirmPwd" placeholder="Tu contraseña actual"></div>
+        <button class="btn btn-primary btn-sm" onclick="registerNewAdmin()">Registrar admin</button>
+      </div>
+      <!-- Lista de admins -->
       <div style="font-size:.82rem;color:var(--text3);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.05em;font-weight:500">Admins del sistema</div>
       <ul class="user-list" id="adminsList">
         <li style="color:var(--text3);font-size:.85rem;font-style:italic">Cargando...</li>
@@ -644,6 +715,38 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
     </div>
 
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modalAdmin')">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Preferencias de Admin -->
+<div class="modal-overlay admin-prefs-modal" id="modalAdminPrefs">
+  <div class="modal" style="max-width:440px">
+    <h2>⚙ Preferencias</h2>
+    <!-- Avatar -->
+    <div class="settings-section">
+      <h4>Foto de perfil</h4>
+      <div class="avatar-selector">
+        <div class="avatar-preview" id="adminAvatarPreview"></div>
+        <div>
+          <input type="file" id="adminAvatarInput" accept="image/*" style="display:none" onchange="loadAdminAvatar(this)">
+          <button class="avatar-upload-btn" onclick="document.getElementById('adminAvatarInput').click()">📷 Cambiar foto</button>
+          <button class="avatar-upload-btn danger-btn" style="margin-left:6px" onclick="removeAdminAvatar()">✕ Quitar</button>
+        </div>
+      </div>
+      <div class="field"><label>Nombre visible</label><input type="text" id="adminDisplayName" placeholder="Tu nombre visible"></div>
+    </div>
+    <!-- Cambiar contraseña -->
+    <div class="settings-section">
+      <h4>Cambiar contraseña</h4>
+      <div class="field"><label>Contraseña actual</label><input type="password" id="adminOldPwd" placeholder="Contraseña actual"></div>
+      <div class="field"><label>Nueva contraseña</label><input type="password" id="adminNewPwd" placeholder="Nueva contraseña"></div>
+      <div class="field"><label>Confirmar nueva contraseña</label><input type="password" id="adminNewPwd2" placeholder="Repetí la nueva contraseña"></div>
+      <button class="btn btn-secondary btn-sm" onclick="changeAdminPassword()">🔒 Cambiar contraseña</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalAdminPrefs')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveAdminProfile()">💾 Guardar cambios</button>
+    </div>
   </div>
 </div>
 
@@ -698,6 +801,11 @@ let S = {
   readMap: {},
   continueMap: {},
   favorites: [],
+  displayName: null,
+  avatar: null,
+  // avatar temporal en prefs (antes de guardar)
+  pendingAvatar: undefined,
+  adminPendingAvatar: undefined,
   // reporte en curso
   reportSelection: '',
 };
@@ -790,6 +898,8 @@ async function init() {
         const rows = await sb.getWhere('users', 'username', savedSession);
         if (rows.length > 0) {
           S.currentUser = { username: rows[0].username, role: 'user', id: rows[0].id };
+          S.displayName = rows[0].display_name || null;
+          S.avatar = rows[0].avatar || null;
           await loadUserData();
         } else {
           localStorage.removeItem('nt_session');
@@ -878,6 +988,8 @@ async function doLogin() {
     const user = rows[0];
     // Usuarios registrados usan hash simple (mismo sistema de antes)
     if (user.password_hash !== hashPwd(pwd)) { errEl.textContent = 'Contraseña incorrecta.'; return; }
+    S.displayName = user.display_name || null;
+    S.avatar = user.avatar || null;
     await loginSuccess(username, 'user', user.id);
   } catch(e) { errEl.textContent = 'Error al conectar: ' + e.message; }
 }
@@ -921,7 +1033,9 @@ async function doRegister() {
     if (existing.length > 0) { errEl.textContent = 'Ese nombre de usuario ya existe.'; return; }
 
     const id = 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-    await sb.upsert('users', { id, username, password_hash: hashPwd(pwd) });
+    const displayName = document.getElementById('regDisplayName').value.trim() || null;
+    await sb.upsert('users', { id, username, password_hash: hashPwd(pwd), display_name: displayName });
+    S.displayName = displayName;
     // Crear user_data inicial
     await sb.upsert('user_data', { user_id: id, favorites: [], read_map: {}, continue_map: {} });
     toast('✓ Cuenta creada. Iniciando sesión...');
@@ -1073,14 +1187,23 @@ function updateNavUser() {
   const ddRole = document.getElementById('ddRole');
   if (S.currentUser) {
     const u = S.currentUser.username;
-    av.textContent = u === 'guest' ? '?' : u.charAt(0).toUpperCase();
-    nm.textContent = u === 'guest' ? 'Invitado' : u;
-    ddName.textContent = u === 'guest' ? 'Invitado' : u;
+    const displayLabel = (S.displayName && u !== 'guest') ? S.displayName : (u === 'guest' ? 'Invitado' : u);
+    // Avatar: imagen si tiene, sino inicial
+    const avatarSrc = S.currentUser.avatar || S.avatar;
+    if (avatarSrc) {
+      av.innerHTML = `<img src="${avatarSrc}" alt="">`;
+    } else {
+      av.textContent = u === 'guest' ? '?' : u.charAt(0).toUpperCase();
+      av.innerHTML = u === 'guest' ? '?' : u.charAt(0).toUpperCase();
+    }
+    nm.textContent = displayLabel;
+    ddName.textContent = displayLabel;
     ddRole.textContent = S.currentUser.role === 'admin' ? '⭐ Administrador' : (u === 'guest' ? 'Invitado' : 'Lector');
-    av.style.background = S.currentUser.role === 'admin' ? 'var(--accent)' : (u === 'guest' ? '#888' : '#5a8a6a');
+    av.style.background = avatarSrc ? 'transparent' : (S.currentUser.role === 'admin' ? 'var(--accent)' : (u === 'guest' ? '#888' : '#5a8a6a'));
   } else {
     av.textContent = '?'; nm.textContent = 'Entrar';
     ddName.textContent = '–'; ddRole.textContent = '–';
+    av.style.background = '';
   }
   document.querySelectorAll('.admin-only').forEach(el => {
     el.style.display = S.admin ? 'inline-flex' : 'none';
@@ -1100,29 +1223,43 @@ function openUserProfile() {
   closeUserMenu();
   if (!S.currentUser) return;
   if (S.currentUser.username === 'guest') { toast('Creá una cuenta para tener perfil'); return; }
-  document.getElementById('profileTitle').textContent = '👤 ' + S.currentUser.username;
+  const displayLabel = S.displayName || S.currentUser.username;
+  document.getElementById('profileTitle').textContent = '👤 ' + displayLabel;
+  // Pre-cargar campos de configuración
+  document.getElementById('profileDisplayName').value = S.displayName || '';
+  document.getElementById('profileOldPwd').value = '';
+  document.getElementById('profileNewPwd').value = '';
+  document.getElementById('profileNewPwd2').value = '';
+  document.getElementById('profileConfirmPwd').value = '';
+  // Avatar preview
+  S.pendingAvatar = undefined;
+  renderProfileAvatarPreview();
   renderProfileStats();
   switchProfileTab('stats');
   openModal('modalProfile');
 }
 
 function switchProfileTab(tab) {
-  document.querySelectorAll('#modalProfile .modal-tab').forEach((b,i) => {
-    b.classList.toggle('active', ['stats','favorites','history'][i] === tab);
-  });
-  document.querySelectorAll('#modalProfile .modal-tab-panel').forEach((p,i) => {
-    p.classList.toggle('active', ['stats','favorites','history'][i] === tab);
-  });
+  const tabs = ['stats','favorites','history','settings'];
+  document.querySelectorAll('#modalProfile .modal-tab').forEach((b,i) => b.classList.toggle('active', tabs[i] === tab));
+  document.querySelectorAll('#modalProfile .modal-tab-panel').forEach((p,i) => p.classList.toggle('active', tabs[i] === tab));
+  // Ocultar footer por defecto en tab settings (tiene su propio footer)
+  const defFooter = document.getElementById('profileDefaultFooter');
+  if (defFooter) defFooter.style.display = tab === 'settings' ? 'none' : '';
   if (tab === 'favorites') renderProfileFavorites();
   if (tab === 'history') renderProfileHistory();
+  if (tab === 'stats') renderProfileStats();
 }
 
 function renderProfileStats() {
   const readCount = Object.keys(S.readMap).filter(k => S.readMap[k]).length;
   const favCount = S.favorites.length;
   const novelsStarted = S.novels.filter(n => (n.chapters||[]).some(c => S.readMap[c.id])).length;
+  const displayLabel = S.displayName || S.currentUser.username;
   document.getElementById('profileStats').innerHTML = `
     <div style="margin-bottom:1rem">
+      <div class="profile-stat"><span>Usuario</span><span>${esc(S.currentUser.username)}</span></div>
+      ${S.displayName ? `<div class="profile-stat"><span>Nombre visible</span><span>${esc(S.displayName)}</span></div>` : ''}
       <div class="profile-stat"><span>Capítulos leídos</span><span>${readCount}</span></div>
       <div class="profile-stat"><span>Novelas iniciadas</span><span>${novelsStarted}</span></div>
       <div class="profile-stat"><span>Favoritos</span><span>${favCount}</span></div>
@@ -1193,7 +1330,7 @@ function switchAdminTab(tab) {
   document.querySelectorAll('#modalAdmin .modal-tab').forEach((b,i) => b.classList.toggle('active', tabs[i] === tab));
   document.querySelectorAll('#modalAdmin .modal-tab-panel').forEach((p,i) => p.classList.toggle('active', tabs[i] === tab));
   if (tab === 'reports') loadReports();
-  if (tab === 'admins') loadAdminsList();
+  if (tab === 'admins') { loadAdminsList(); clearAddAdminForm(); }
 }
 
 async function loadAdminsList() {
@@ -1402,7 +1539,7 @@ async function submitReport() {
     chapter_num: chMeta ? chMeta.num : null,
     selected_text: S.reportSelection.slice(0, 500),
     comment: document.getElementById('reportComment').value.trim(),
-    reporter: S.currentUser ? S.currentUser.username : 'invitado',
+    reporter: S.currentUser ? (S.displayName || S.currentUser.username) : 'invitado',
     resolved: false
   };
   try {
@@ -1951,6 +2088,209 @@ function confirmDeleteChapter(novelId, chId) {
 }
 
 // ════════════════════════════════════════════
+//  PERFIL DE USUARIO — AVATAR Y CONFIGURACIÓN
+// ════════════════════════════════════════════
+function renderProfileAvatarPreview() {
+  const el = document.getElementById('profileAvatarPreview');
+  if (!el) return;
+  const src = S.pendingAvatar !== undefined ? S.pendingAvatar : S.avatar;
+  if (src) {
+    el.innerHTML = `<img src="${src}" alt="">`;
+    el.style.background = 'transparent';
+  } else {
+    el.textContent = S.currentUser ? S.currentUser.username.charAt(0).toUpperCase() : '?';
+    el.style.background = '#5a8a6a';
+  }
+}
+
+function loadProfileAvatar(input) {
+  if (!input.files[0]) return;
+  const r = new FileReader();
+  r.onload = e => { S.pendingAvatar = e.target.result; renderProfileAvatarPreview(); };
+  r.readAsDataURL(input.files[0]);
+}
+
+function removeProfileAvatar() {
+  S.pendingAvatar = null;
+  document.getElementById('profileAvatarInput').value = '';
+  renderProfileAvatarPreview();
+}
+
+async function saveUserProfile() {
+  if (!S.currentUser || !S.currentUser.id) return;
+  const confirmPwd = document.getElementById('profileConfirmPwd').value;
+  if (!confirmPwd) { toast('Ingresá tu contraseña para guardar cambios', 2500); return; }
+  const displayName = document.getElementById('profileDisplayName').value.trim();
+  const avatarToSave = S.pendingAvatar !== undefined ? S.pendingAvatar : undefined;
+  toast('Guardando...', 1500);
+  try {
+    const result = await sb.rpc('update_user_profile', {
+      p_user_id: S.currentUser.id,
+      p_password: hashPwd(confirmPwd),
+      p_display_name: displayName,
+      p_avatar: avatarToSave !== undefined ? avatarToSave : null
+    });
+    if (!result || !result.success) { toast(result?.message || 'Error al guardar', 3000); return; }
+    if (displayName) S.displayName = displayName;
+    if (avatarToSave !== undefined) { S.avatar = avatarToSave; }
+    S.pendingAvatar = undefined;
+    updateNavUser();
+    document.getElementById('profileTitle').textContent = '👤 ' + (S.displayName || S.currentUser.username);
+    toast('✓ Perfil actualizado');
+    closeModal('modalProfile');
+  } catch(e) { toast('Error: ' + e.message, 3000); }
+}
+
+async function changeUserPassword() {
+  if (!S.currentUser || !S.currentUser.id) return;
+  const oldPwd = document.getElementById('profileOldPwd').value;
+  const newPwd = document.getElementById('profileNewPwd').value;
+  const newPwd2 = document.getElementById('profileNewPwd2').value;
+  if (!oldPwd || !newPwd) { toast('Completá todos los campos de contraseña', 2500); return; }
+  if (newPwd.length < 4) { toast('La nueva contraseña debe tener al menos 4 caracteres', 2500); return; }
+  if (newPwd !== newPwd2) { toast('Las nuevas contraseñas no coinciden', 2500); return; }
+  toast('Cambiando contraseña...', 1500);
+  try {
+    const result = await sb.rpc('change_user_password', {
+      p_user_id: S.currentUser.id,
+      p_old_password: hashPwd(oldPwd),
+      p_new_password: hashPwd(newPwd)
+    });
+    if (!result || !result.success) { toast(result?.message || 'Error', 3000); return; }
+    document.getElementById('profileOldPwd').value = '';
+    document.getElementById('profileNewPwd').value = '';
+    document.getElementById('profileNewPwd2').value = '';
+    toast('✓ Contraseña cambiada con éxito');
+  } catch(e) { toast('Error: ' + e.message, 3000); }
+}
+
+// ════════════════════════════════════════════
+//  PREFERENCIAS DE ADMIN
+// ════════════════════════════════════════════
+function openAdminPrefs() {
+  if (!S.currentUser || !S.admin) return;
+  S.adminPendingAvatar = undefined;
+  document.getElementById('adminDisplayName').value = S.displayName || '';
+  document.getElementById('adminOldPwd').value = '';
+  document.getElementById('adminNewPwd').value = '';
+  document.getElementById('adminNewPwd2').value = '';
+  renderAdminAvatarPreview();
+  openModal('modalAdminPrefs');
+}
+
+function renderAdminAvatarPreview() {
+  const el = document.getElementById('adminAvatarPreview');
+  if (!el) return;
+  const src = S.adminPendingAvatar !== undefined ? S.adminPendingAvatar : (S.currentUser?.avatar || S.avatar);
+  if (src) {
+    el.innerHTML = `<img src="${src}" alt="">`;
+    el.style.background = 'transparent';
+  } else {
+    el.textContent = S.currentUser ? S.currentUser.username.charAt(0).toUpperCase() : '?';
+    el.style.background = 'var(--accent)';
+  }
+}
+
+function loadAdminAvatar(input) {
+  if (!input.files[0]) return;
+  const r = new FileReader();
+  r.onload = e => { S.adminPendingAvatar = e.target.result; renderAdminAvatarPreview(); };
+  r.readAsDataURL(input.files[0]);
+}
+
+function removeAdminAvatar() {
+  S.adminPendingAvatar = null;
+  document.getElementById('adminAvatarInput').value = '';
+  renderAdminAvatarPreview();
+}
+
+async function saveAdminProfile() {
+  if (!S.currentUser || !S.admin) return;
+  const pwd = sessionStorage.getItem('nt_admin_pwd');
+  if (!pwd) { toast('Sesión expirada, volvé a iniciar sesión', 3000); return; }
+  const displayName = document.getElementById('adminDisplayName').value.trim();
+  const avatarToSave = S.adminPendingAvatar !== undefined ? S.adminPendingAvatar : undefined;
+  toast('Guardando...', 1500);
+  try {
+    const result = await sb.rpc('update_admin_profile', {
+      p_username: S.currentUser.username,
+      p_password: pwd,
+      p_display_name: displayName || null,
+      p_avatar: avatarToSave !== undefined ? avatarToSave : null
+    });
+    if (!result || !result.success) { toast(result?.message || 'Error al guardar', 3000); return; }
+    if (displayName) S.displayName = displayName;
+    if (avatarToSave !== undefined) {
+      S.avatar = avatarToSave;
+      if (S.currentUser) S.currentUser.avatar = avatarToSave;
+    }
+    S.adminPendingAvatar = undefined;
+    updateNavUser();
+    toast('✓ Preferencias guardadas');
+    closeModal('modalAdminPrefs');
+  } catch(e) { toast('Error: ' + e.message, 3000); }
+}
+
+async function changeAdminPassword() {
+  if (!S.currentUser || !S.admin) return;
+  const oldPwd = document.getElementById('adminOldPwd').value;
+  const newPwd = document.getElementById('adminNewPwd').value;
+  const newPwd2 = document.getElementById('adminNewPwd2').value;
+  if (!oldPwd || !newPwd) { toast('Completá todos los campos', 2500); return; }
+  if (newPwd.length < 4) { toast('La nueva contraseña debe tener al menos 4 caracteres', 2500); return; }
+  if (newPwd !== newPwd2) { toast('Las nuevas contraseñas no coinciden', 2500); return; }
+  const sessionPwd = sessionStorage.getItem('nt_admin_pwd');
+  if (sessionPwd !== oldPwd) { toast('La contraseña actual no es correcta', 2500); return; }
+  toast('Cambiando contraseña...', 1500);
+  try {
+    const result = await sb.rpc('change_admin_password', {
+      p_username: S.currentUser.username,
+      p_old_password: oldPwd,
+      p_new_password: newPwd
+    });
+    if (!result || !result.success) { toast(result?.message || 'Error', 3000); return; }
+    sessionStorage.setItem('nt_admin_pwd', newPwd);
+    document.getElementById('adminOldPwd').value = '';
+    document.getElementById('adminNewPwd').value = '';
+    document.getElementById('adminNewPwd2').value = '';
+    toast('✓ Contraseña de admin cambiada con éxito');
+  } catch(e) { toast('Error: ' + e.message, 3000); }
+}
+
+// ════════════════════════════════════════════
+//  REGISTRAR NUEVO ADMIN
+// ════════════════════════════════════════════
+function clearAddAdminForm() {
+  const fields = ['newAdminUser','newAdminPass','newAdminConfirmPwd'];
+  fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+}
+
+async function registerNewAdmin() {
+  const newUser = document.getElementById('newAdminUser').value.trim().toLowerCase();
+  const newPass = document.getElementById('newAdminPass').value;
+  const confirmPwd = document.getElementById('newAdminConfirmPwd').value;
+  if (!newUser || !newPass || !confirmPwd) { toast('Completá todos los campos', 2500); return; }
+  if (newUser.length < 3) { toast('El usuario debe tener al menos 3 caracteres', 2500); return; }
+  if (newPass.length < 4) { toast('La contraseña debe tener al menos 4 caracteres', 2500); return; }
+  const sessionPwd = sessionStorage.getItem('nt_admin_pwd');
+  if (!sessionPwd || !S.currentUser) { toast('Sesión no disponible', 2500); return; }
+  if (sessionPwd !== confirmPwd) { toast('Tu contraseña actual es incorrecta', 2500); return; }
+  toast('Registrando admin...', 1500);
+  try {
+    const result = await sb.rpc('create_new_admin', {
+      p_admin_username: S.currentUser.username,
+      p_admin_password: sessionPwd,
+      p_new_username: newUser,
+      p_new_password: newPass
+    });
+    if (!result || !result.success) { toast(result?.message || 'Error al registrar', 3000); return; }
+    clearAddAdminForm();
+    await loadAdminsList();
+    toast('✓ Admin "' + newUser + '" registrado con éxito');
+  } catch(e) { toast('Error: ' + e.message, 3000); }
+}
+
+// ════════════════════════════════════════════
 //  MODALS
 // ════════════════════════════════════════════
 function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -1963,18 +2303,6 @@ function openConfirm(msg, cb) {
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
-
-// ════════════════════════════════════════════
-//  PROFILE TABS (helper)
-// ════════════════════════════════════════════
-function switchProfileTab(tab) {
-  const tabs = ['stats','favorites','history'];
-  document.querySelectorAll('#modalProfile .modal-tab').forEach((b,i) => b.classList.toggle('active', tabs[i] === tab));
-  document.querySelectorAll('#modalProfile .modal-tab-panel').forEach((p,i) => p.classList.toggle('active', tabs[i] === tab));
-  if (tab === 'favorites') renderProfileFavorites();
-  if (tab === 'history') renderProfileHistory();
-  if (tab === 'stats') renderProfileStats();
-}
 
 // ════════════════════════════════════════════
 //  TOAST
